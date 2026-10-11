@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test telecomando Samsung — CineTV</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0d1524;color:#fff;font-family:Arial,Helvetica,sans-serif}body{padding:3vw}h1{font-size:clamp(25px,3vw,48px);margin:0 0 12px}p{font-size:clamp(17px,1.8vw,25px);line-height:1.5;color:#cbd5e1}.hint{padding:13px 20px;border-radius:12px;background:#1d3150;margin:20px 0}.status{background:#1a2437;padding:20px;border-radius:14px;margin:20px 0;font-size:clamp(18px,2vw,28px)}.status strong{color:#81d4fa}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:24px}.tile{padding:40px 10px;min-height:145px;background:#263b58;border:4px solid transparent;color:white;border-radius:16px;font-size:clamp(20px,2vw,30px);cursor:pointer;outline:none}.tile:focus,.tile.focused{border-color:#ffdd57;background:#315985;box-shadow:0 0 0 5px rgba(255,221,87,.12)}.tile:hover{background:#35547b}.log{font-family:monospace;white-space:pre-wrap;color:#b1eab5;font-size:clamp(15px,1.5vw,22px);padding:16px;background:#07111e;border-radius:12px;min-height:80px}.small{font-size:17px;color:#9facbf}.btn{padding:13px 24px;border:2px solid #82b1ff;background:#143456;color:#fff;border-radius:10px;font-size:20px;cursor:pointer} @media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}.tile{min-height:110px;padding:20px 8px}}
+</style>
+</head>
+<body>
+<h1>📺 Test telecomando Samsung</h1>
+<p>Questa pagina serve <b>solo per testare i tasti</b>. CineTV rimane identico.</p>
+<div class="hint"><p><b>Prova 1:</b> premi destra, sinistra, su e giù sul telecomando. Guarda se cambia il testo «Ultimo tasto rilevato».</p><p><b>Prova 2:</b> porta il puntatore su «Casella 1», premi OK, poi premi destra. Guarda se si evidenzia «Casella 2» senza spostare il puntatore.</p></div>
+<div class="status">Ultimo tasto rilevato: <strong id="last">nessuno</strong><br>Casella attiva: <strong id="current">nessuna</strong><br>Click/OK ricevuto: <strong id="clicked">no</strong></div>
+<div class="grid" id="grid">
+<button class="tile" type="button">Casella 1</button><button class="tile" type="button">Casella 2</button><button class="tile" type="button">Casella 3</button>
+<button class="tile" type="button">Casella 4</button><button class="tile" type="button">Casella 5</button><button class="tile" type="button">Casella 6</button>
+</div>
+<p class="small">Nota: se il browser muove soltanto il puntatore e non cambia «Ultimo tasto rilevato», sta gestendo il telecomando al posto della pagina.</p>
+<div class="log" id="log">In attesa di comandi...</div>
+<script>
+(function(){
+'use strict';
+var tiles=[].slice.call(document.querySelectorAll('.tile'));
+var current=-1;
+var log=document.getElementById('log');
+function say(s){log.textContent=s+'\n'+log.textContent.slice(0,460)}
+function select(i){if(i<0||i>=tiles.length)return;current=i;tiles.forEach(function(b){b.classList.remove('focused')});tiles[i].classList.add('focused');tiles[i].focus();document.getElementById('current').textContent='Casella '+(i+1)}
+function activate(i){document.getElementById('clicked').textContent='Casella '+(i+1);say('OK / click su Casella '+(i+1))}
+tiles.forEach(function(b,i){b.addEventListener('click',function(){select(i);activate(i)});b.addEventListener('focus',function(){current=i;document.getElementById('current').textContent='Casella '+(i+1)})});
+document.addEventListener('keydown',function(e){var k=e.key||('codice '+e.keyCode);document.getElementById('last').textContent=k+' (codice '+e.keyCode+')';say('Tasto ricevuto: '+k+' ['+e.keyCode+']');var old=current;if(old<0)old=0;var next=old;switch(e.keyCode){case 37: next=Math.max(0,old-1);break;case 39: next=Math.min(tiles.length-1,old+1);break;case 38: next=Math.max(0,old-3);break;case 40: next=Math.min(tiles.length-1,old+3);break;case 13: if(current>=0)activate(current);e.preventDefault();return;default:return;}e.preventDefault();select(next)},false);
+})();
+</script>
+</body>
+</html>
