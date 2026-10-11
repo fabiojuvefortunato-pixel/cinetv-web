@@ -1,4 +1,4 @@
-/* CineTV — Interfaccia TV 1.4 (Chromium/Tizen 5.5 friendly).
+/* CineTV — Interfaccia TV 1.5 (Chromium/Tizen 5.5 friendly).
  * Catalogo dal Worker Cloudflare già configurato in ../config.js.
  * Nessuna chiave TMDB è inclusa in questo file.
  */
@@ -237,9 +237,9 @@
     el('player-frame').src='about:blank';
     el('player-frame').classList.add('hidden');
     el('player-choice').classList.remove('hidden');
-    el('player-hint').textContent='Il lettore di terze parti potrebbe essere bloccato. Usa una delle opzioni in alto.';
+    el('player-hint').textContent='Usa Apri nel browser. Al ritorno riapri CineTV e ritroverai il titolo nella cronologia.';
     el('up-next').classList.add('hidden');
-    focusSafe(el('player-sameapp'));
+    focusSafe(el('player-external'));
   }
   function tryEmbed(){
     if(!selected||!playback.active)return;
@@ -361,8 +361,9 @@
       el('trailer-open').classList.remove('hidden');
       el('trailer-thumb').src='https://img.youtube.com/vi/'+chosen.key+'/hqdefault.jpg';
       el('trailer-thumb').classList.remove('hidden');
-      el('trailer-play').classList.remove('hidden');
-      focusSafe(el('trailer-play'));
+      // YouTube non riproduce stabilmente l'iframe sulla TV 2020: evita il pulsante che restava vuoto.
+      el('trailer-play').classList.add('hidden');
+      focusSafe(el('trailer-open'));
     }).catch(function(err){el('trailer-caption').textContent='Trailer non disponibile: verifica che il Worker Cloudflare sia aggiornato.';});
   }
   function closeTrailer(){
@@ -380,7 +381,7 @@
     el('trailer-frame').src='https://www.youtube-nocookie.com/embed/'+trailerKey+'?rel=0&playsinline=1&autoplay=1';
     focusSafe(el('trailer-close'));
   }
-  function openTrailerLink(){if(trailerUrl)window.open(trailerUrl,'_blank','noopener,noreferrer');}
+  function openTrailerLink(){if(!trailerUrl)return;rememberExternalOpen();window.open(trailerUrl,'_blank','noopener,noreferrer');}
   function rememberExternalOpen(){
     if(!selected)return;
     save('cinetv_external_return',{stamp:Date.now(),item:itemNorm(selected),season:season,episode:episode,page:activePage});
@@ -424,9 +425,9 @@
     if(action==='cancelNext'){clearNext();return;}
     if(action==='trailerClose'){closeTrailer();return;}
     if(action==='youtubeOpen'){openTrailerLink();return;}
-    if(action==='trailerInternal'){openTrailerInside();return;}
-    if(action==='sameAppPlay'){openVideoSameApp();return;}
-    if(action==='tryEmbed'){tryEmbed();return;}
+    if(action==='trailerInternal'){setToast('Il trailer interno non è supportato qui. Usa Apri su YouTube.');return;}
+    if(action==='sameAppPlay'){setToast('Usa Apri nel browser per la riproduzione.');return;}
+    if(action==='tryEmbed'){setToast('L’incorporamento non è consentito dal servizio video.');return;}
     if(action==='provider'){state.providerId=node.getAttribute('data-id');state.providerName=node.getAttribute('data-name');state.genreId='';state.genreName='';state.catalogType='movie';state.catalogPage=1;activePage='catalog';view.scrollTop=0;renderProviderSelect();return;}
     if(action==='genre'){state.genreId=node.getAttribute('data-id');state.genreName=node.getAttribute('data-name');state.providerId='';state.providerName='';state.catalogType='movie';state.catalogPage=1;activePage='catalog';view.scrollTop=0;renderProviderSelect();return;}
     if(action==='chooseType'){state.catalogType=node.getAttribute('data-type');state.catalogPage=1;renderProviderSelect();return;}
