@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#070a13">
   <meta name="referrer" content="origin">
   <title>CineTV — Smart TV</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=1.4">
 </head>
 <body>
   <div id="app">
@@ -42,9 +42,18 @@
     <div class="video-topbar">
       <button id="player-close" class="video-tool tv-focus" data-action="playerClose">← Torna a CineTV</button>
       <strong id="playback-title">Riproduzione</strong>
+      <button id="player-sameapp" class="video-tool tv-focus" data-action="sameAppPlay">Nella stessa app (test)</button>
       <a id="player-external" class="video-tool tv-focus" href="https://vixsrc.to/" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Apri direttamente ↗</a>
     </div>
-    <iframe id="player-frame" title="Lettore video esterno" src="about:blank" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="origin" loading="eager"></iframe>
+    <div id="player-choice" class="player-choice">
+      <div class="player-choice-inner">
+        <h2>Scegli come aprire il video</h2>
+        <p>Il lettore incorporato è stato bloccato da Cloudflare nei test precedenti. Puoi aprirlo nel browser oppure provare la navigazione nella stessa app Tizen.</p>
+        <div class="player-choice-note">L'apertura nella stessa app è sperimentale e richiede il dominio Vixsrc autorizzato nel config.xml.</div>
+        <button class="action tv-focus" data-action="tryEmbed">Prova il lettore incorporato</button>
+      </div>
+    </div>
+    <iframe id="player-frame" class="hidden" title="Lettore video esterno" src="about:blank" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="origin" loading="eager"></iframe>
     <div id="player-hint" class="video-hint">Usa i controlli del lettore.</div>
     <div id="up-next" class="up-next hidden">
       <div class="up-next-eyebrow">EPISODIO SUCCESSIVO</div>
@@ -60,9 +69,18 @@
       <strong id="trailer-caption">Trailer</strong>
       <button id="trailer-open" class="video-tool tv-focus hidden" data-action="youtubeOpen">Apri YouTube ↗</button>
     </div>
-    <div class="trailer-container"><iframe id="trailer-frame" title="Trailer del film o della serie" src="about:blank" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    <div class="trailer-container">
+      <div id="trailer-preview" class="trailer-preview">
+        <img id="trailer-thumb" class="hidden" alt="Anteprima del trailer">
+        <div class="trailer-preview-actions">
+          <p>Il trailer viene aperto qui soltanto quando premi OK.</p>
+          <button id="trailer-play" class="action primary tv-focus hidden" data-action="trailerInternal">▶ Riproduci qui</button>
+        </div>
+      </div>
+      <iframe id="trailer-frame" class="hidden" title="Trailer del film o della serie" src="about:blank" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    </div>
   </section>
   <script src="../config.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=1.4"></script>
 </body>
 </html>

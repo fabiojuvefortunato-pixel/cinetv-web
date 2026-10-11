@@ -1,4 +1,4 @@
-/* CineTV — Interfaccia TV 1.0 (Chromium/Tizen 5.5 friendly).
+/* CineTV — Interfaccia TV 1.4 (Chromium/Tizen 5.5 friendly).
  * Catalogo dal Worker Cloudflare già configurato in ../config.js.
  * Nessuna chiave TMDB è inclusa in questo file.
  */
@@ -39,7 +39,25 @@
     var timer=setTimeout(function(){if(controller)controller.abort();},18000);
     fetch(url,{method:'GET',headers:{Accept:'application/json'},signal:controller?controller.signal:undefined}).then(function(r){if(!r.ok)throw new Error('Catalogo TMDB: HTTP '+r.status);return r.json();}).then(function(data){clearTimeout(timer);resolve(data);}).catch(function(e){clearTimeout(timer);reject(e);});
   });}
-  function focusSafe(node){if(node && typeof node.focus==='function'){node.focus();node.classList.add('tv-active');setTimeout(function(){node.classList.remove('tv-active');},90); try{node.scrollIntoView({block:'nearest',inline:'nearest'});}catch(e){}}}
+  // Focus spaziale: mostra anche gli elementi delle righe non ancora visibili.
+  function focusSafe(node){
+    if(!node || typeof node.focus!=='function')return;
+    var scroller = view.contains(node)?view:(dialog.contains(node)?dialog:null);
+    var stripNode = node.closest ? node.closest('.horizontal') : null;
+    if(stripNode){
+      var br=node.getBoundingClientRect(), sr=stripNode.getBoundingClientRect();
+      if(br.right>sr.right-40)stripNode.scrollLeft+=br.right-sr.right+52;
+      if(br.left<sr.left+40)stripNode.scrollLeft-=sr.left-br.left+52;
+    }
+    if(scroller){
+      var r=node.getBoundingClientRect(), v=scroller.getBoundingClientRect();
+      if(r.bottom>v.bottom-54)scroller.scrollTop+=r.bottom-v.bottom+80;
+      if(r.top<v.top+32)scroller.scrollTop-=v.top+32-r.top;
+    }
+    node.focus();
+    node.classList.add('tv-active');
+    setTimeout(function(){node.classList.remove('tv-active');},90);
+  }
   function firstFocus(){focusSafe(view.querySelector('.tv-focus')||document.querySelector('.topnav .tv-focus'));}
   function navStatus(){document.querySelectorAll('.top-link').forEach(function(node){node.classList.toggle('selected',node.getAttribute('data-go')===activePage);});}
   function mainFocusTarget(){
@@ -76,7 +94,10 @@
     var x=itemNorm(items[state.heroIndex%items.length]);var back=img(x,'w1280','backdrop_path')||img(x,'w780','poster_path');
     var excerpt=x.overview||'Scopri uno dei titoli più popolari del momento.';
     if(excerpt.length>185)excerpt=excerpt.slice(0,181).replace(/\s+\S*$/,'')+'…';
-    var h='<div class="hero"><div class="hero-photo" style="background-image:url(&quot;'+escapeHTML(back)+'&quot;)"></div><div class="hero-scrim"></div><div class="hero-inner">'+
+    // Gli <img> hanno resa più affidabile dei CSS background su Tizen 5.5.
+    var fall=img(x,'w780','poster_path');
+    var visual=back?'<img class="hero-backdrop" src="'+escapeHTML(back)+'" data-fallback="'+escapeHTML(fall)+'" alt="">':'';
+    var h='<div class="hero"><div class="hero-photo">'+visual+'</div><div class="hero-scrim"></div><div class="hero-inner">'+
       '<div class="hero-tag"><i></i> CONSIGLIATO PER TE · '+(kind(x)==='tv'?'SERIE TV':'FILM')+'</div><h1 class="hero-title">'+escapeHTML(title(x))+'</h1><div class="hero-info"><span>'+escapeHTML(year(x))+'</span><span>'+(kind(x)==='tv'?'Serie TV':'Film')+'</span><span class="score">★ '+Number(x.vote_average||0).toFixed(1)+'</span></div><p class="hero-description">'+escapeHTML(excerpt)+'</p><div class="hero-buttons"><button class="action primary tv-focus" data-action="heroPlay">▶ &nbsp; Guarda ora</button><button class="action tv-focus" data-action="heroDetail">ⓘ &nbsp; Dettagli</button></div></div><div class="hero-pager">';
     for(var i=0;i<Math.min(items.length,5);i++)h+='<button class="pager-dot tv-focus '+(i===state.heroIndex?'active':'')+'" data-action="heroSlide" data-index="'+i+'" aria-label="Consigliato '+(i+1)+'"></button>';
     return h+'</div></div>';
@@ -212,9 +233,19 @@
     playerLayer.classList.remove('hidden');playerLayer.setAttribute('aria-hidden','false');
     el('playback-title').textContent=title(selected)+(kind(selected)==='tv'?' · S'+season+' E'+episode:'');
     el('player-external').href=playerUrl();
-    el('player-frame').src=embeddedLink();
-    el('player-hint').textContent='Usa i comandi del lettore per pausa e avanzamento. Se il video non si carica, scegli Apri direttamente.';
+    // Non avviare automaticamente l'iframe già bloccato da Cloudflare.
+    el('player-frame').src='about:blank';
+    el('player-frame').classList.add('hidden');
+    el('player-choice').classList.remove('hidden');
+    el('player-hint').textContent='Il lettore di terze parti potrebbe essere bloccato. Usa una delle opzioni in alto.';
     el('up-next').classList.add('hidden');
+    focusSafe(el('player-sameapp'));
+  }
+  function tryEmbed(){
+    if(!selected||!playback.active)return;
+    el('player-choice').classList.add('hidden');
+    el('player-frame').classList.remove('hidden');
+    el('player-frame').src=embeddedLink();
     focusSafe(el('player-close'));
   }
   function clearNext(){
@@ -311,6 +342,11 @@
     trailerLayer.classList.remove('hidden');
     trailerLayer.setAttribute('aria-hidden','false');
     el('trailer-frame').src='about:blank';
+    el('trailer-frame').classList.add('hidden');
+    el('trailer-preview').classList.remove('hidden');
+    el('trailer-play').classList.add('hidden');
+    el('trailer-thumb').classList.add('hidden');
+    trailerKey='';
     el('trailer-open').classList.add('hidden');
     closeDialog(false);focusSafe(el('trailer-close'));
     call('/'+type+'/'+id+'/videos',{include_video_language:'it,en,fr,es,de,ja,ko,zh,pt,ru,hi,ar,null'}).then(function(data){
@@ -319,18 +355,60 @@
       videos.sort(function(a,b){return youtubeVideoRank(b)-youtubeVideoRank(a);});
       if(!videos.length){el('trailer-caption').textContent='Trailer non disponibile per questo titolo.';return;}
       var chosen=videos[0];
+      trailerKey=chosen.key;
       trailerUrl='https://www.youtube.com/watch?v='+chosen.key;
       el('trailer-caption').textContent=(chosen.iso_639_1==='it'?'Trailer italiano':chosen.iso_639_1==='en'?'Trailer in inglese':'Trailer in lingua originale')+' · '+title(x);
       el('trailer-open').classList.remove('hidden');
-      el('trailer-frame').src='https://www.youtube-nocookie.com/embed/'+chosen.key+'?autoplay=1&rel=0';
+      el('trailer-thumb').src='https://img.youtube.com/vi/'+chosen.key+'/hqdefault.jpg';
+      el('trailer-thumb').classList.remove('hidden');
+      el('trailer-play').classList.remove('hidden');
+      focusSafe(el('trailer-play'));
     }).catch(function(err){el('trailer-caption').textContent='Trailer non disponibile: verifica che il Worker Cloudflare sia aggiornato.';});
   }
   function closeTrailer(){
     el('trailer-frame').src='about:blank';
+    trailerKey='';
     trailerLayer.classList.add('hidden');trailerLayer.setAttribute('aria-hidden','true');
     if(selected)renderDetail();else focusSafe(mainFocusTarget());
   }
-  function openTrailerLink(){if(trailerUrl)window.location.assign(trailerUrl);}
+  var trailerKey='';
+  function openTrailerInside(){
+    if(!trailerKey)return;
+    el('trailer-preview').classList.add('hidden');
+    el('trailer-frame').classList.remove('hidden');
+    // Il trailer viene avviato solo dopo un OK esplicito: evita aperture automatiche del browser.
+    el('trailer-frame').src='https://www.youtube-nocookie.com/embed/'+trailerKey+'?rel=0&playsinline=1&autoplay=1';
+    focusSafe(el('trailer-close'));
+  }
+  function openTrailerLink(){if(trailerUrl)window.open(trailerUrl,'_blank','noopener,noreferrer');}
+  function rememberExternalOpen(){
+    if(!selected)return;
+    save('cinetv_external_return',{stamp:Date.now(),item:itemNorm(selected),season:season,episode:episode,page:activePage});
+  }
+  function openVideoSameApp(){
+    // Test opzionale: funziona solo se config.xml di Tizen permette la navigazione su vixsrc.to.
+    if(!selected)return;
+    rememberExternalOpen();
+    window.location.assign(playerUrl());
+  }
+  function restoreRecentDetail(){
+    var saved=read('cinetv_external_return',null);
+    if(!saved||!saved.item||!saved.stamp)return;
+    save('cinetv_external_return',null);
+    if(Date.now()-Number(saved.stamp)>20*60*1000)return;
+    // Se il sistema ha terminato CineTV mentre era aperto il browser, ripristina la scheda.
+    setTimeout(function(){
+      if(dialogMode||playback.active||!trailerLayer.classList.contains('hidden'))return;
+      choose(saved.item);
+      if(kind(saved.item)==='tv'){
+        season=Number(saved.season)||1;
+        episode=Number(saved.episode)||1;
+        currentEpisodes=[];
+        renderDetail();
+        loadEpisodes();
+      }
+    },900);
+  }
   function doClick(node){if(!node)return;var action=node.getAttribute('data-action');var go=node.getAttribute('data-go');if(go){if(!isInRail(document.activeElement))lastMainFocus=document.activeElement;goto(go);return;}
     if(action==='heroSlide'){state.heroIndex=Number(node.getAttribute('data-index'))||0;composeHome();return;}
     if(action==='heroDetail'||action==='heroPlay'){choose(cache.all[state.heroIndex%cache.all.length]);if(action==='heroPlay'&&selected)launchPlay();return;}
@@ -346,6 +424,9 @@
     if(action==='cancelNext'){clearNext();return;}
     if(action==='trailerClose'){closeTrailer();return;}
     if(action==='youtubeOpen'){openTrailerLink();return;}
+    if(action==='trailerInternal'){openTrailerInside();return;}
+    if(action==='sameAppPlay'){openVideoSameApp();return;}
+    if(action==='tryEmbed'){tryEmbed();return;}
     if(action==='provider'){state.providerId=node.getAttribute('data-id');state.providerName=node.getAttribute('data-name');state.genreId='';state.genreName='';state.catalogType='movie';state.catalogPage=1;activePage='catalog';view.scrollTop=0;renderProviderSelect();return;}
     if(action==='genre'){state.genreId=node.getAttribute('data-id');state.genreName=node.getAttribute('data-name');state.providerId='';state.providerName='';state.catalogType='movie';state.catalogPage=1;activePage='catalog';view.scrollTop=0;renderProviderSelect();return;}
     if(action==='chooseType'){state.catalogType=node.getAttribute('data-type');state.catalogPage=1;renderProviderSelect();return;}
@@ -374,21 +455,51 @@
     if(isInRail(current)&&direction==='right'){menu(false);return;}
     if(!dialogMode&&!isInRail(current)&&direction==='left'&&current.getBoundingClientRect().left<380){lastMainFocus=current;menu(true);return;}
     var scope=dialogMode?dialog:(state.menuOpen?rail:document);
-    var nodes=[].slice.call(scope.querySelectorAll('.tv-focus')).filter(function(n){var r=n.getBoundingClientRect();return !n.disabled&&r.width>0&&r.height>0&&r.bottom>0&&r.top<window.innerHeight;});
+    // Non filtrare per posizione nello schermo: le righe e la paginazione in basso
+    // hanno coordinate valide anche quando sono fuori dalla viewport.
+    var nodes=[].slice.call(scope.querySelectorAll('.tv-focus')).filter(function(n){
+      if(n.disabled || (!state.menuOpen && !dialogMode && isInRail(n)))return false;
+      if(n.closest && n.closest('.hidden'))return false;
+      var r=n.getBoundingClientRect(), cs=window.getComputedStyle(n);
+      return r.width>0 && r.height>0 && cs.display!=='none' && cs.visibility!=='hidden';
+    });
     var a=current.getBoundingClientRect(),ax=a.left+a.width/2,ay=a.top+a.height/2,best=null,score=Infinity;
-    nodes.forEach(function(n){if(n===current)return;var b=n.getBoundingClientRect(),bx=b.left+b.width/2,by=b.top+b.height/2,dx=bx-ax,dy=by-ay;
+    nodes.forEach(function(n){if(n===current)return;
+      var b=n.getBoundingClientRect(),bx=b.left+b.width/2,by=b.top+b.height/2,dx=bx-ax,dy=by-ay;
       if(direction==='right'&&dx<12 ||direction==='left'&&dx>-12 ||direction==='up'&&dy>-12 ||direction==='down'&&dy<12)return;
       var longitudinal=(direction==='right'||direction==='left')?Math.abs(dx):Math.abs(dy);
       var cross=(direction==='right'||direction==='left')?Math.abs(dy):Math.abs(dx);
-      var s=longitudinal+cross*2.35;if(cross>longitudinal*1.8)s+=600;if(s<score){score=s;best=n;}
+      var scoreCandidate=longitudinal+cross*(direction==='up'||direction==='down'?1.7:2.35);
+      if(cross>longitudinal*1.8)scoreCandidate+=400;
+      if(scoreCandidate<score){score=scoreCandidate;best=n;}
     });
     if(best){focusSafe(best);return;}
-    // Let a horizontal row scroll when its next item is currently offscreen.
+    // Le righe orizzontali restano navigabili anche quando tutte le card sono fuori vista.
     var row=current.closest?current.closest('.horizontal'):null;
-    if(row && (direction==='right'||direction==='left')){row.scrollLeft+=(direction==='right'?310:-310);return;}
+    if(row && (direction==='right'||direction==='left')){
+      row.scrollLeft+=(direction==='right'?300:-300);
+      return;
+    }
+    if((direction==='down'||direction==='up') && !dialogMode && view.scrollHeight>view.clientHeight){
+      view.scrollTop+=(direction==='down'?1:-1)*Math.round(view.clientHeight*.65);
+      return;
+    }
     if(direction==='left'&&!dialogMode&&!state.menuOpen){lastMainFocus=current;menu(true);}
   }
-  document.addEventListener('click',function(e){var node=e.target.closest?e.target.closest('[data-action],[data-go]'):null;if(node)doClick(node);});
+  document.addEventListener('click',function(e){
+    var origin=e.target.closest?e.target.closest('#player-external'):null;
+    if(origin){rememberExternalOpen();return;}
+    var node=e.target.closest?e.target.closest('[data-action],[data-go]'):null;
+    if(node)doClick(node);
+  });
+  document.addEventListener('error',function(e){
+    var image=e.target;
+    if(image && image.classList && image.classList.contains('hero-backdrop')){
+      var fallback=image.getAttribute('data-fallback');
+      if(fallback && image.src!==fallback){image.setAttribute('data-fallback','');image.src=fallback;}
+      else image.classList.add('hidden');
+    }
+  },true);
   document.addEventListener('input',function(e){
     if(e.target.id!=='search-input')return;
     if(searchTimer)clearTimeout(searchTimer);
@@ -417,4 +528,5 @@
     composeHome();
   },7800);
   goto('home');
+  restoreRecentDetail();
 })();
