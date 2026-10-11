@@ -211,6 +211,7 @@
     playback.active=true;playback.tracking=false;playback.autoQueued=false;playback.startedAt=Date.now();playback.lastStoredTime=0;
     playerLayer.classList.remove('hidden');playerLayer.setAttribute('aria-hidden','false');
     el('playback-title').textContent=title(selected)+(kind(selected)==='tv'?' · S'+season+' E'+episode:'');
+    el('player-external').href=playerUrl();
     el('player-frame').src=embeddedLink();
     el('player-hint').textContent='Usa i comandi del lettore per pausa e avanzamento. Se il video non si carica, scegli Apri direttamente.';
     el('up-next').classList.add('hidden');
@@ -228,11 +229,6 @@
     el('player-frame').src='about:blank';
     playerLayer.classList.add('hidden');playerLayer.setAttribute('aria-hidden','true');
     if(returnToDetails && selected)renderDetail();else focusSafe(mainFocusTarget());
-  }
-  function openExternalPlayer(){
-    if(!selected)return;
-    /* Compatibilità: apertura esterna solo su richiesta dell'utente. */
-    window.location.assign(embeddedLink());
   }
   function nextEpisodeInfo(){
     if(!selected||kind(selected)!=='tv')return Promise.resolve(null);
@@ -257,6 +253,7 @@
     season=next.season;episode=next.episode;currentEpisodes=[];playback.lastStoredTime=0;
     rememberPlayback(0,0);
     el('playback-title').textContent=title(selected)+' · S'+season+' E'+episode;
+    el('player-external').href=playerUrl();
     el('player-frame').src=playerUrl()+'&autoplay=true';
     loadEpisodes();
     setToast('Riproduzione episodio '+episode+' della stagione '+season);
@@ -345,7 +342,6 @@
     if(action==='play'){launchPlay();return;}
     if(action==='trailer'){launchTrailer();return;}
     if(action==='playerClose'){closePlayback(true);return;}
-    if(action==='externalPlay'){openExternalPlayer();return;}
     if(action==='nextEpisode'){playNext();return;}
     if(action==='cancelNext'){clearNext();return;}
     if(action==='trailerClose'){closeTrailer();return;}
