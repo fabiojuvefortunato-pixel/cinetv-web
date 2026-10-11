@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#070a13">
+  <meta name="referrer" content="no-referrer">
+  <title>CineTV — Smart TV</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="rail" class="rail" aria-label="Menu laterale">
+      <div class="rail-head"><span class="app-symbol">▶</span><strong class="expanded-only">Cine<span>TV</span></strong></div>
+      <nav id="side-menu">
+        <button class="side-link tv-focus" data-go="search" data-nav="1" aria-label="Cerca"><span class="side-icon">⌕</span><span class="expanded-only">Cerca</span></button>
+        <button class="side-link tv-focus" data-go="explore" data-nav="1" aria-label="Esplora"><span class="side-icon">▦</span><span class="expanded-only">Esplora</span></button>
+        <button class="side-link tv-focus" data-go="favorites" data-nav="1" aria-label="Preferiti"><span class="side-icon">♡</span><span class="expanded-only">Preferiti</span></button>
+        <button class="side-link tv-focus" data-go="settings" data-nav="1" aria-label="Informazioni"><span class="side-icon">⚙</span><span class="expanded-only">Informazioni</span></button>
+      </nav>
+      <div class="rail-foot expanded-only">Catalogo TMDB <span>·</span> CineTV</div>
+    </aside>
+    <main class="page" id="page">
+      <header class="topbar">
+        <div class="logo">Cine<span>TV</span><span class="logo-dot">.</span></div>
+        <nav class="topnav" id="topnav">
+          <button class="top-link tv-focus selected" data-go="home">Home</button>
+          <button class="top-link tv-focus" data-go="movie">Film</button>
+          <button class="top-link tv-focus" data-go="tv">Serie TV</button>
+          <button class="top-link tv-focus" data-go="live">TV in diretta <small>PROSSIMAMENTE</small></button>
+        </nav>
+        <div class="top-actions"><span class="top-live-dot"></span><span>SMART TV</span></div>
+      </header>
+      <div id="view" class="viewport"></div>
+      <div id="status" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+  <div id="shade" class="shade hidden" aria-hidden="true"></div>
+  <div id="dialog" class="dialog hidden" role="dialog" aria-modal="true"></div>
+  <script src="../config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
