@@ -21,3 +21,21 @@ footer.credits{font-size:13px;color:#7e899f;padding:38px 75px}
 .platform:before{position:absolute;top:16px;left:24px;margin:0}
 .platform-hint{margin-top:7px;line-height:1.25;font-size:12px}
 .empty-continue{margin:0 75px 25px;padding:17px 23px;border:1px dashed #4d4c6f;border-radius:13px;color:#a5b1ca;font-size:17px;background:#131a2a}
+
+/* CineTV 1.1 - navigazione, ricerca, lettore interno e trailer */
+html{scroll-behavior:smooth}
+.horizontal{scroll-behavior:smooth}
+.hero-photo{transition:background-image .3s ease,opacity .25s ease}
+.search-tip{font-size:20px;color:#b6bfd4;padding:24px 77px}
+.search-box:focus{border-color:#bfa7ff}
+.video-layer{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;background:#050711;color:#fff}
+.video-topbar{min-height:75px;flex-shrink:0;display:flex;align-items:center;gap:24px;padding:12px 27px;background:#121628;box-shadow:0 5px 18px #0006}
+.video-topbar strong{flex:1;font-size:23px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.video-tool{border:1px solid #666585;background:#272944;color:#f8f8ff;border-radius:11px;padding:13px 18px;font-weight:bold;font-size:18px;min-height:52px;white-space:nowrap}
+#player-frame{flex:1;display:block;width:100%;height:calc(100% - 75px);border:0;background:#050711}
+.video-hint{position:absolute;bottom:0;left:0;right:0;padding:8px 20px;background:linear-gradient(transparent,#080d1bbb);color:#b9c0d2;font-size:12px;text-align:center;pointer-events:none}
+.up-next{position:absolute;right:55px;bottom:65px;width:470px;max-width:90vw;padding:28px;background:#1c2032;border:1px solid #8873d8;box-shadow:0 20px 70px #000b;border-radius:20px;z-index:90}
+.up-next h3{font-size:32px;margin:10px 0}.up-next p{font-size:18px;color:#bdc6d8}.up-next-eyebrow{font-size:13px;letter-spacing:2px;color:#b8a4ff;font-weight:bold}.up-next .action{margin-right:12px;margin-top:9px}
+.trailer-container{flex:1;display:flex;align-items:center;justify-content:center;padding:25px;background:#080b17}
+#trailer-frame{width:100%;height:100%;max-width:1450px;max-height:815px;border:0;background:#0c0f20}
+@media(max-width:800px){.video-topbar{gap:8px;padding:10px}.video-tool{font-size:14px;padding:9px}.video-topbar strong{font-size:14px}.up-next{right:10px;bottom:30px;width:95vw}.trailer-container{padding:7px}}

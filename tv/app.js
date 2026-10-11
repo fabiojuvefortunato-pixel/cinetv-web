@@ -13,6 +13,10 @@
   var reqCounter = 0, lastMainFocus = null;
   var view = document.getElementById('view'), dialog = document.getElementById('dialog'), shade = document.getElementById('shade');
   var rail = document.getElementById('rail'), toastTimer = null;
+  var searchTimer = null, searchFocusAfterSubmit = false, lastSearchRequest = 0;
+  var playerLayer = el('player-layer'), trailerLayer = el('trailer-layer');
+  var playback = {active:false, tracking:false, nextTimer:null, nextSeconds:0, autoQueued:false, startedAt:0, lastStoredTime:0};
+  var trailerUrl = '';
   function el(id){return document.getElementById(id);}
   function read(key, fallback){try{return JSON.parse(localStorage.getItem(key)||'null')||fallback;}catch(e){return fallback;}}
   function save(key, val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
@@ -38,7 +42,19 @@
   function focusSafe(node){if(node && typeof node.focus==='function'){node.focus();node.classList.add('tv-active');setTimeout(function(){node.classList.remove('tv-active');},90); try{node.scrollIntoView({block:'nearest',inline:'nearest'});}catch(e){}}}
   function firstFocus(){focusSafe(view.querySelector('.tv-focus')||document.querySelector('.topnav .tv-focus'));}
   function navStatus(){document.querySelectorAll('.top-link').forEach(function(node){node.classList.toggle('selected',node.getAttribute('data-go')===activePage);});}
-  function menu(flag){state.menuOpen=flag;rail.classList.toggle('open',flag);if(flag){var target=rail.querySelector('.side-link[data-go="'+activePage+'"]')||rail.querySelector('.side-link');focusSafe(target);}else if(lastMainFocus){focusSafe(lastMainFocus);}else focusSafe(document.querySelector('.top-link.selected'));}
+  function mainFocusTarget(){
+    if(lastMainFocus && document.contains(lastMainFocus) && !isInRail(lastMainFocus) && lastMainFocus.classList.contains('tv-focus'))return lastMainFocus;
+    return view.querySelector('.tv-focus') || document.querySelector('.top-link.selected') || document.querySelector('.topnav .tv-focus');
+  }
+  function menu(flag, firstAfterNavigation){
+    state.menuOpen=flag;rail.classList.toggle('open',flag);
+    if(flag){
+      if(!isInRail(document.activeElement) && document.activeElement.classList.contains('tv-focus'))lastMainFocus=document.activeElement;
+      focusSafe(rail.querySelector('.side-link[data-go="'+activePage+'"]')||rail.querySelector('.side-link'));
+    }else{
+      focusSafe(firstAfterNavigation?(view.querySelector('.tv-focus')||document.querySelector('.top-link.selected')):mainFocusTarget());
+    }
+  }
   function goto(page){closeDialog(false);if(page==='live'){activePage='live';navStatus();view.innerHTML='<div class="empty"><div class="hero-tag">CINETV · IN PREPARAZIONE</div><strong>TV in diretta</strong>Questa sezione arriverà in un futuro aggiornamento. Nessun canale è configurato in questa versione.</div>';menu(false);focusSafe(document.querySelector('.top-link[data-go="live"]'));return;}
     if(page==='search'){activePage=page;navStatus();renderSearch();}
     else if(page==='favorites'){activePage=page;navStatus();renderFavorites();}
@@ -46,7 +62,7 @@
     else if(page==='explore'){activePage=page;navStatus();renderExplore();}
     else if(page==='home'){activePage=page;navStatus();renderHome();}
     else if(page==='movie'||page==='tv'){activePage=page;state.catalogType=page;state.providerId='';state.providerName='';state.genreId='';state.genreName='';state.catalogPage=1;navStatus();renderCatalog();}
-    menu(false);view.scrollTop=0;
+    lastMainFocus=null;menu(false,true);view.scrollTop=0;
   }
   function tile(item,idx,mode){var x=itemNorm(item),photo=img(x,'w780','backdrop_path')||img(x,'w500','poster_path'),r=getRecent(x);
     var label=mode==='recent' && r ? (kind(x)==='tv'?'STAGIONE '+(r.season||1)+' · EPISODIO '+(r.episode||1):'FILM · RIPRENDI') : (kind(x)==='tv'?'SERIE TV':'FILM');
@@ -127,18 +143,37 @@
       el('explorer').innerHTML=html;
     }).catch(function(e){if(pid===reqCounter&&el('explorer'))el('explorer').innerHTML='<div class="empty"><strong>Esplora non disponibile</strong>'+escapeHTML(e.message)+'</div>';});
   }
-  function renderSearch(){view.innerHTML='<div class="contain-header"><div class="hero-tag">CINETV · RICERCA</div><h1 class="section-title">Cosa vuoi guardare?</h1><p class="page-description">Cerca film e serie TV per titolo, poi premi OK.</p><input id="search-input" class="search-box tv-focus" type="search" placeholder="Cerca un titolo…" value="'+escapeHTML(state.searchQuery)+'"><button class="action primary tv-focus" data-action="submitSearch">⌕ Cerca</button></div><div id="search-results"></div>';if(state.searchQuery)runSearch(state.searchQuery);else focusSafe(el('search-input'));}
-  function runSearch(text){text=String(text||'').trim();state.searchQuery=text;var result=el('search-results');if(!result)return;if(!text){result.innerHTML='<div class="empty">Digita almeno una parola.</div>';return;}result.innerHTML='<div class="empty">Ricerca in corso…</div>';var pid=++reqCounter;
-    call('/search/multi',{query:text,include_adult:'false',page:1}).then(function(data){if(pid!==reqCounter||activePage!=='search')return;state.results=(data.results||[]).filter(function(x){return x.media_type==='tv'||x.media_type==='movie';}).map(itemNorm);result.innerHTML=state.results.length?'<div class="catalog">'+state.results.map(function(x,i){return poster(x,i,'results');}).join('')+'</div>':'<div class="empty"><strong>Nessun titolo trovato</strong>Prova una ricerca diversa.</div>';}).catch(function(e){result.innerHTML='<div class="empty"><strong>Errore ricerca</strong>'+escapeHTML(e.message)+'</div>';});
+  function renderSearch(){
+    view.innerHTML='<div class="contain-header"><div class="hero-tag">CINETV · RICERCA</div><h1 class="section-title">Cosa vuoi guardare?</h1><p class="page-description">I risultati appaiono mentre scrivi, dopo due caratteri.</p><input id="search-input" class="search-box tv-focus" type="search" autocomplete="off" placeholder="Cerca un titolo…" value="'+escapeHTML(state.searchQuery)+'"><button class="action primary tv-focus" data-action="submitSearch">⌕ Cerca</button></div><div id="search-results"><div class="search-tip">Scrivi almeno 2 lettere per vedere i titoli corrispondenti.</div></div>';
+    if(state.searchQuery.length>=2)runSearch(state.searchQuery,false);else focusSafe(el('search-input'));
+  }
+  function resultFocus(){var first=el('search-results')&&el('search-results').querySelector('.poster.tv-focus');return first||document.querySelector('[data-action="submitSearch"]');}
+  function runSearch(value, focusWhenReady){
+    var text=String(value||'').trim();state.searchQuery=text;
+    var result=el('search-results');if(!result)return;
+    if(searchTimer)clearTimeout(searchTimer);
+    var pid=++reqCounter;
+    if(text.length<2){state.results=[];result.innerHTML='<div class="search-tip">Scrivi almeno 2 lettere per vedere i titoli corrispondenti.</div>';return;}
+    result.innerHTML='<div class="search-tip">Ricerca in corso…</div>';
+    call('/search/multi',{query:text,include_adult:'false',page:1}).then(function(data){
+      if(pid!==reqCounter||activePage!=='search'||state.searchQuery!==text)return;
+      state.results=(data.results||[]).filter(function(x){return x.media_type==='tv'||x.media_type==='movie';}).map(function(x){return itemNorm(x);});
+      result.innerHTML=state.results.length?'<div class="catalog">'+state.results.map(function(x,i){return poster(x,i,'results');}).join('')+'</div>':'<div class="empty"><strong>Nessun titolo trovato</strong>Prova un altro titolo.</div>';
+      if(focusWhenReady || searchFocusAfterSubmit){searchFocusAfterSubmit=false;focusSafe(resultFocus());}
+    }).catch(function(e){if(pid!==reqCounter||activePage!=='search')return;result.innerHTML='<div class="empty"><strong>Ricerca non disponibile</strong>'+escapeHTML(e.message)+'</div>';});
+  }
+  function submitSearch(){
+    var field=el('search-input');if(!field)return;
+    searchFocusAfterSubmit=true;field.blur();runSearch(field.value,true);
   }
   function choose(item){if(!item)return;selected=itemNorm(item);season=1;episode=1;var last=getRecent(selected);if(last){season=Number(last.season)||1;episode=Number(last.episode)||1;}
     currentSeasons=[];currentEpisodes=[];state.selectedBefore=document.activeElement;renderDetail();
-    call('/'+kind(selected)+'/'+selected.id,{}).then(function(detail){if(!selected||Number(detail.id)!==selected.id)return;selected=itemNorm(Object.assign({},selected,detail));currentSeasons=detail.seasons||[];renderDetail();if(kind(selected)==='tv')loadEpisodes();}).catch(function(e){if(kind(selected)==='tv')loadEpisodes();});
+    call('/'+kind(selected)+'/'+selected.id,{}).then(function(detail){if(!selected||Number(detail.id)!==selected.id)return;selected=itemNorm(Object.assign({},selected,detail));currentSeasons=detail.seasons||[];if(dialogMode==='detail')renderDetail();if(kind(selected)==='tv')loadEpisodes();}).catch(function(e){if(kind(selected)==='tv')loadEpisodes();});
   }
   function playerUrl(){if(!selected)return '';if(kind(selected)==='tv')return 'https://vixsrc.to/tv/'+selected.id+'/'+season+'/'+episode+'?lang=it';return 'https://vixsrc.to/movie/'+selected.id+'?lang=it';}
   function renderDetail(focusAction){if(!selected)return;dialogMode='detail';shade.classList.remove('hidden');dialog.classList.remove('hidden');
     var x=selected,photo=img(x,'w500','poster_path'),r=getRecent(x),f=isFav(x),isTv=kind(x)==='tv';
-    var html='<button class="dialog-close tv-focus" data-action="close" aria-label="Chiudi">×</button><div class="detail-layout"><div class="detail-art">'+(photo?'<img src="'+escapeHTML(photo)+'" alt="">':'')+'</div><div class="detail-main"><span class="detail-kicker">'+(isTv?'SERIE TV':'FILM')+' · '+year(x)+'</span><h2>'+escapeHTML(title(x))+'</h2><div class="hero-info"><span class="score">★ '+Number(x.vote_average||0).toFixed(1)+'</span><span>TMDB</span></div><p>'+escapeHTML(x.overview||'Descrizione non disponibile in italiano.')+'</p><div class="detail-actions"><button class="action primary tv-focus" data-action="play">▶ Guarda ora</button><button class="action tv-focus" data-action="fav">'+(f?'♥ Nei preferiti':'♡ Aggiungi ai preferiti')+'</button></div>';
+    var html='<button class="dialog-close tv-focus" data-action="close" aria-label="Chiudi">×</button><div class="detail-layout"><div class="detail-art">'+(photo?'<img src="'+escapeHTML(photo)+'" alt="">':'')+'</div><div class="detail-main"><span class="detail-kicker">'+(isTv?'SERIE TV':'FILM')+' · '+year(x)+'</span><h2>'+escapeHTML(title(x))+'</h2><div class="hero-info"><span class="score">★ '+Number(x.vote_average||0).toFixed(1)+'</span><span>TMDB</span></div><p>'+escapeHTML(x.overview||'Descrizione non disponibile in italiano.')+'</p><div class="detail-actions"><button class="action primary tv-focus" data-action="play">▶ Guarda ora</button><button class="action tv-focus" data-action="trailer">▷ Trailer</button><button class="action tv-focus" data-action="fav">'+(f?'♥ Nei preferiti':'♡ Aggiungi ai preferiti')+'</button></div>';
     if(isTv){var seasons=(currentSeasons||[]).filter(function(s){return Number(s.season_number)>0;});if(!seasons.length){seasons=[{season_number:season}];}
       html+='<div class="detail-divider"></div><div class="detail-kicker">STAGIONI</div><div class="season-row">';
       seasons.forEach(function(s){var v=Number(s.season_number);html+='<button class="season-btn tv-focus '+(v===season?'selected':'')+'" data-action="season" data-index="'+v+'">'+v+'</button>';});
@@ -150,12 +185,156 @@
     html+='</div></div>';dialog.innerHTML=html;focusSafe((focusAction==='season'?dialog.querySelector('[data-action="season"][data-index="'+season+'"]'):focusAction==='episode'?dialog.querySelector('[data-action="episode"][data-index="'+episode+'"]'):null)||dialog.querySelector('[data-action="play"]'));
   }
   function loadEpisodes(){if(!selected||kind(selected)!=='tv')return;var currentId=selected.id,requestedSeason=season;
-    call('/tv/'+currentId+'/season/'+requestedSeason,{}).then(function(data){if(!selected||selected.id!==currentId||season!==requestedSeason)return;currentEpisodes=data.episodes||[];if(currentEpisodes.length&&!currentEpisodes.some(function(e){return Number(e.episode_number)===episode;}))episode=Number(currentEpisodes[0].episode_number)||1;renderDetail('season');}).catch(function(){currentEpisodes=[];});
+    call('/tv/'+currentId+'/season/'+requestedSeason,{}).then(function(data){if(!selected||selected.id!==currentId||season!==requestedSeason)return;currentEpisodes=data.episodes||[];if(currentEpisodes.length&&!currentEpisodes.some(function(e){return Number(e.episode_number)===episode;}))episode=Number(currentEpisodes[0].episode_number)||1;if(dialogMode==='detail')renderDetail('season');}).catch(function(){currentEpisodes=[];});
   }
   function closeDialog(restore){if(!dialogMode)return;dialogMode='';dialog.classList.add('hidden');shade.classList.add('hidden');dialog.innerHTML='';if(restore!==false)focusSafe(state.selectedBefore);}
   function toggleFav(){if(!selected)return;var exists=isFav(selected);favorites=favorites.filter(function(x){return !(x.id===selected.id&&x.media_type===kind(selected));});if(!exists)favorites.unshift(itemNorm(selected));save('cinetv_favorites',favorites);renderDetail();setToast(exists?'Rimosso dai preferiti':'Aggiunto ai preferiti');}
-  function launchPlay(){if(!selected)return;var x=itemNorm(selected);var entry=Object.assign({},x,{season:season,episode:episode,lastOpened:Date.now()});recent=recent.filter(function(r){return !(Number(r.id)===x.id&&r.media_type===kind(x));});recent.unshift(entry);recent=recent.slice(0,20);save('cinetv_recent_v3',recent);var link=playerUrl();if(!/^https:\/\/vixsrc\.to\/(movie|tv)\/[0-9/]+\?lang=it$/.test(link))return;window.location.assign(link);}
-  function doClick(node){if(!node)return;var action=node.getAttribute('data-action');var go=node.getAttribute('data-go');if(go){lastMainFocus=document.activeElement;goto(go);return;}
+  function rememberPlayback(time,duration){
+    if(!selected)return;
+    var x=itemNorm(selected),k=kind(x),now=Date.now();
+    var old=getRecent(x);
+    var entry=Object.assign({},x,{season:season,episode:episode,lastOpened:now,
+      seconds:(typeof time==='number'&&isFinite(time)&&time>=0?Math.floor(time):old&&Number(old.seconds)||0),
+      duration:(typeof duration==='number'&&isFinite(duration)&&duration>0?Math.floor(duration):old&&Number(old.duration)||0)});
+    recent=recent.filter(function(r){return !(Number(r.id)===x.id&&r.media_type===k);});
+    recent.unshift(entry);recent=recent.slice(0,20);save('cinetv_recent_v3',recent);
+  }
+  function embeddedLink(){
+    var link=playerUrl();var r=getRecent(selected);
+    if(r && r.seconds>=15 && (!r.duration||r.seconds<r.duration-30) &&
+       (kind(selected)!=='tv'||(r.season===season&&r.episode===episode)))link+='&startAt='+Math.floor(r.seconds);
+    return link+'&autoplay=true';
+  }
+  function launchPlay(){
+    if(!selected||playback.active)return;
+    rememberPlayback();closeDialog(false);
+    playback.active=true;playback.tracking=false;playback.autoQueued=false;playback.startedAt=Date.now();playback.lastStoredTime=0;
+    playerLayer.classList.remove('hidden');playerLayer.setAttribute('aria-hidden','false');
+    el('playback-title').textContent=title(selected)+(kind(selected)==='tv'?' · S'+season+' E'+episode:'');
+    el('player-frame').src=embeddedLink();
+    el('player-hint').textContent='Usa i comandi del lettore per pausa e avanzamento. Se il video non si carica, scegli Apri direttamente.';
+    el('up-next').classList.add('hidden');
+    focusSafe(el('player-close'));
+  }
+  function clearNext(){
+    if(playback.nextTimer){clearInterval(playback.nextTimer);playback.nextTimer=null;}
+    playback.autoQueued=false;
+    el('up-next').classList.add('hidden');
+  }
+  function closePlayback(returnToDetails){
+    if(!playback.active)return;
+    clearNext();
+    playback.active=false;playback.tracking=false;
+    el('player-frame').src='about:blank';
+    playerLayer.classList.add('hidden');playerLayer.setAttribute('aria-hidden','true');
+    if(returnToDetails && selected)renderDetail();else focusSafe(mainFocusTarget());
+  }
+  function openExternalPlayer(){
+    if(!selected)return;
+    /* Compatibilità: apertura esterna solo su richiesta dell'utente. */
+    window.location.assign(embeddedLink());
+  }
+  function nextEpisodeInfo(){
+    if(!selected||kind(selected)!=='tv')return Promise.resolve(null);
+    var id=selected.id,s=season,e=episode;
+    return call('/tv/'+id+'/season/'+s,{}).then(function(result){
+      var numbers=(result.episodes||[]).map(function(x){return Number(x.episode_number);}).filter(function(x){return x>e;}).sort(function(a,b){return a-b;});
+      if(numbers.length)return {season:s,episode:numbers[0]};
+      return call('/tv/'+id,{}).then(function(data){
+        var valid=(data.seasons||[]).map(function(x){return Number(x.season_number);}).filter(function(x){return x>s;}).sort(function(a,b){return a-b;});
+        if(!valid.length)return null;
+        var newS=valid[0];
+        return call('/tv/'+id+'/season/'+newS,{}).then(function(data2){
+          var es=(data2.episodes||[]).map(function(x){return Number(x.episode_number);}).filter(function(x){return x>0;}).sort(function(a,b){return a-b;});
+          return es.length?{season:newS,episode:es[0]}:null;
+        });
+      });
+    });
+  }
+  function playNext(){
+    var next=playback.pendingNext;if(!playback.active||!next)return;
+    clearNext();
+    season=next.season;episode=next.episode;currentEpisodes=[];playback.lastStoredTime=0;
+    rememberPlayback(0,0);
+    el('playback-title').textContent=title(selected)+' · S'+season+' E'+episode;
+    el('player-frame').src=playerUrl()+'&autoplay=true';
+    loadEpisodes();
+    setToast('Riproduzione episodio '+episode+' della stagione '+season);
+  }
+  function announceNext(next){
+    if(!next||!playback.active)return;
+    playback.pendingNext=next;playback.autoQueued=true;
+    playback.nextSeconds=6;
+    el('up-next-title').textContent='Stagione '+next.season+' · Episodio '+next.episode;
+    el('up-next-countdown').textContent='Riproduzione automatica tra '+playback.nextSeconds+' secondi';
+    el('up-next').classList.remove('hidden');
+    playback.nextTimer=setInterval(function(){
+      if(!playback.active){clearNext();return;}
+      playback.nextSeconds--;
+      el('up-next-countdown').textContent='Riproduzione automatica tra '+playback.nextSeconds+' secondi';
+      if(playback.nextSeconds<=0)playNext();
+    },1000);
+    focusSafe(el('play-next'));
+  }
+  window.addEventListener('message',function(ev){
+    if(!playback.active||ev.origin!=='https://vixsrc.to')return;
+    var frame=el('player-frame');if(!frame||ev.source!==frame.contentWindow)return;
+    var msg=ev.data;
+    if(typeof msg==='string'){try{msg=JSON.parse(msg);}catch(e){return;}}
+    if(!msg||msg.type!=='PLAYER_EVENT'||!msg.data)return;
+    var d=msg.data;
+    if(d.event==='timeupdate'||d.event==='seeked'||d.event==='pause'){
+      playback.tracking=true;
+      if(isFinite(Number(d.currentTime)) && (d.event!=='timeupdate'||Date.now()-playback.lastStoredTime>=4000)){
+        rememberPlayback(Number(d.currentTime),Number(d.duration));playback.lastStoredTime=Date.now();
+      }
+    }
+    if(d.event==='ended'){
+      playback.tracking=true;
+      if(kind(selected)!=='tv'||playback.autoQueued)return;
+      /* La fine dell'episodio è comunicata dal lettore; non la deduciamo da un timer. */
+      playback.autoQueued=true;
+      nextEpisodeInfo().then(function(next){if(!playback.active)return;
+        if(next)announceNext(next);else{playback.autoQueued=false;setToast('Hai terminato gli episodi disponibili.');}
+      }).catch(function(){playback.autoQueued=false;setToast('Impossibile verificare l’episodio successivo.');});
+    }
+  });
+  function youtubeVideoRank(x){
+    if(!x||x.site!=='YouTube'||!/^[A-Za-z0-9_-]{11}$/.test(x.key))return -1;
+    if(x.type!=='Trailer'&&x.type!=='Teaser')return -1;
+    return (x.iso_639_1==='it'?100:x.iso_639_1==='en'?50:10)
+      +(x.type==='Trailer'?30:x.type==='Teaser'?12:0)
+      +(x.official?8:0);
+  }
+  function launchTrailer(){
+    if(!selected)return;
+    var x=itemNorm(selected);
+    var id=x.id,type=kind(x);
+    el('trailer-caption').textContent='Ricerca trailer di '+title(x)+'…';
+    trailerLayer.classList.remove('hidden');
+    trailerLayer.setAttribute('aria-hidden','false');
+    el('trailer-frame').src='about:blank';
+    el('trailer-open').classList.add('hidden');
+    closeDialog(false);focusSafe(el('trailer-close'));
+    call('/'+type+'/'+id+'/videos',{include_video_language:'it,en,fr,es,de,ja,ko,zh,pt,ru,hi,ar,null'}).then(function(data){
+      if(trailerLayer.classList.contains('hidden'))return;
+      var videos=(data.results||[]).filter(function(v){return youtubeVideoRank(v)>0;});
+      videos.sort(function(a,b){return youtubeVideoRank(b)-youtubeVideoRank(a);});
+      if(!videos.length){el('trailer-caption').textContent='Trailer non disponibile per questo titolo.';return;}
+      var chosen=videos[0];
+      trailerUrl='https://www.youtube.com/watch?v='+chosen.key;
+      el('trailer-caption').textContent=(chosen.iso_639_1==='it'?'Trailer italiano':chosen.iso_639_1==='en'?'Trailer in inglese':'Trailer in lingua originale')+' · '+title(x);
+      el('trailer-open').classList.remove('hidden');
+      el('trailer-frame').src='https://www.youtube-nocookie.com/embed/'+chosen.key+'?autoplay=1&rel=0';
+    }).catch(function(err){el('trailer-caption').textContent='Trailer non disponibile: verifica che il Worker Cloudflare sia aggiornato.';});
+  }
+  function closeTrailer(){
+    el('trailer-frame').src='about:blank';
+    trailerLayer.classList.add('hidden');trailerLayer.setAttribute('aria-hidden','true');
+    if(selected)renderDetail();else focusSafe(mainFocusTarget());
+  }
+  function openTrailerLink(){if(trailerUrl)window.location.assign(trailerUrl);}
+  function doClick(node){if(!node)return;var action=node.getAttribute('data-action');var go=node.getAttribute('data-go');if(go){if(!isInRail(document.activeElement))lastMainFocus=document.activeElement;goto(go);return;}
     if(action==='heroSlide'){state.heroIndex=Number(node.getAttribute('data-index'))||0;composeHome();return;}
     if(action==='heroDetail'||action==='heroPlay'){choose(cache.all[state.heroIndex%cache.all.length]);if(action==='heroPlay'&&selected)launchPlay();return;}
     if(action==='detail'){var source=node.getAttribute('data-source'),index=Number(node.getAttribute('data-index')),items={recent:validRecent(),all:cache.all,movies:cache.movies,series:cache.series,results:state.results,favorites:favorites};choose((items[source]||[])[index]);return;}
@@ -164,20 +343,37 @@
     if(action==='episode'){episode=Number(node.getAttribute('data-index'))||1;renderDetail('episode');return;}
     if(action==='fav'){toggleFav();return;}
     if(action==='play'){launchPlay();return;}
+    if(action==='trailer'){launchTrailer();return;}
+    if(action==='playerClose'){closePlayback(true);return;}
+    if(action==='externalPlay'){openExternalPlayer();return;}
+    if(action==='nextEpisode'){playNext();return;}
+    if(action==='cancelNext'){clearNext();return;}
+    if(action==='trailerClose'){closeTrailer();return;}
+    if(action==='youtubeOpen'){openTrailerLink();return;}
     if(action==='provider'){state.providerId=node.getAttribute('data-id');state.providerName=node.getAttribute('data-name');state.genreId='';state.genreName='';state.catalogType='movie';state.catalogPage=1;activePage='catalog';view.scrollTop=0;renderProviderSelect();return;}
     if(action==='genre'){state.genreId=node.getAttribute('data-id');state.genreName=node.getAttribute('data-name');state.providerId='';state.providerName='';state.catalogType='movie';state.catalogPage=1;activePage='catalog';view.scrollTop=0;renderProviderSelect();return;}
     if(action==='chooseType'){state.catalogType=node.getAttribute('data-type');state.catalogPage=1;renderProviderSelect();return;}
     if(action==='pageNext'||action==='pagePrev'){state.catalogPage+=action==='pageNext'?1:-1;if(state.catalogPage<1)state.catalogPage=1;renderCatalog();view.scrollTop=0;return;}
-    if(action==='submitSearch'){runSearch(el('search-input').value);return;}
+    if(action==='submitSearch'){submitSearch();return;}
     if(action==='retry'){renderHome();return;}
   }
   function renderProviderSelect(){var header='<div class="contain-header"><div class="hero-tag">CINETV · ESPLORA</div><h1 class="section-title">'+escapeHTML(state.providerName||state.genreName)+'</h1><p class="page-description">Sfoglia film e serie TV. Disponibilità ufficiale in Italia, quando applicabile.</p><div class="pill-list"><button class="pill tv-focus '+(state.catalogType==='movie'?'active':'')+'" data-action="chooseType" data-type="movie">Film</button><button class="pill tv-focus '+(state.catalogType==='tv'?'active':'')+'" data-action="chooseType" data-type="tv">Serie TV</button><button class="pill tv-focus" data-go="explore">← Tutte le categorie</button></div></div><div id="results"><div class="empty">Caricamento…</div></div>';
     view.innerHTML=header;var pid=++reqCounter;var t=state.catalogType;var q={page:state.catalogPage,sort_by:'popularity.desc',include_adult:'false'};if(state.providerId){q.watch_region='IT';q.with_watch_providers=state.providerId;q.with_watch_monetization_types='flatrate';}if(state.genreId){var gid=state.genreId;if(t==='tv'&&cache.genresTv.length){for(var gi=0;gi<cache.genresTv.length;gi++){if(cache.genresTv[gi].name.toLowerCase()===state.genreName.toLowerCase()){gid=cache.genresTv[gi].id;break;}}}q.with_genres=gid;}
     call('/discover/'+t,q).then(function(data){if(pid!==reqCounter||activePage!=='catalog')return;state.results=(data.results||[]).map(function(x){return itemNorm(x,t);});var r=el('results');if(!r)return;r.innerHTML='<div class="catalog">'+state.results.map(function(x,i){return poster(x,i,'results');}).join('')+'</div>'+(Number(data.total_pages)>1?'<div class="pill-list" style="padding-left:80px"><button class="pill tv-focus" data-action="pagePrev" '+(state.catalogPage<=1?'disabled':'')+'>← Precedente</button><span class="pill">Pagina '+state.catalogPage+'</span><button class="pill tv-focus" data-action="pageNext">Successiva →</button></div>':'');}).catch(function(e){if(pid===reqCounter&&el('results'))el('results').innerHTML='<div class="empty"><strong>Non disponibile</strong>'+escapeHTML(e.message)+'</div>';});
   }
-  function back(){if(dialogMode){closeDialog();return;}if(state.menuOpen){menu(false);return;}if(activePage==='catalog'){goto('explore');return;}if(activePage!=='home'){goto('home');return;}menu(true);}
+  function back(){if(!trailerLayer.classList.contains('hidden')){closeTrailer();return;}if(playback.active){closePlayback(true);return;}if(dialogMode){closeDialog();return;}if(state.menuOpen){menu(false);return;}if(activePage==='catalog'){goto('explore');return;}if(activePage!=='home'){goto('home');return;}menu(true);}
   function isInRail(n){return n&&rail.contains(n);}
   function spatial(direction){var current=document.activeElement;if(current&&current.tagName==='INPUT')return;
+    if(playback.active){
+      var playerButtons=[].slice.call(playerLayer.querySelectorAll('.tv-focus')).filter(function(n){return !n.classList.contains('hidden')&&!n.closest('.hidden');});
+      var pos=playerButtons.indexOf(current),step=(direction==='left'||direction==='up')?-1:1;
+      focusSafe(playerButtons[(pos+step+playerButtons.length)%playerButtons.length]||el('player-close'));return;
+    }
+    if(!trailerLayer.classList.contains('hidden')){
+      var trailerButtons=[].slice.call(trailerLayer.querySelectorAll('.tv-focus')).filter(function(n){return !n.classList.contains('hidden')&&!n.closest('.hidden');});
+      var pos2=trailerButtons.indexOf(current),step2=(direction==='left'||direction==='up')?-1:1;
+      focusSafe(trailerButtons[(pos2+step2+trailerButtons.length)%trailerButtons.length]||el('trailer-close'));return;
+    }
     if(!current||!current.classList.contains('tv-focus')){firstFocus();return;}
     if(isInRail(current)&&direction==='right'){menu(false);return;}
     if(!dialogMode&&!isInRail(current)&&direction==='left'&&current.getBoundingClientRect().left<380){lastMainFocus=current;menu(true);return;}
@@ -197,19 +393,32 @@
     if(direction==='left'&&!dialogMode&&!state.menuOpen){lastMainFocus=current;menu(true);}
   }
   document.addEventListener('click',function(e){var node=e.target.closest?e.target.closest('[data-action],[data-go]'):null;if(node)doClick(node);});
+  document.addEventListener('input',function(e){
+    if(e.target.id!=='search-input')return;
+    if(searchTimer)clearTimeout(searchTimer);
+    var value=e.target.value;
+    state.searchQuery=value;
+    searchTimer=setTimeout(function(){runSearch(value,false);},360);
+  });
   document.addEventListener('keydown',function(e){var code=e.keyCode||e.which;if(code===10009||code===27||code===8&&document.activeElement.tagName!=='INPUT'){e.preventDefault();back();return;}
-    if(code===13){var node=document.activeElement;if(node&&node.tagName==='INPUT'){runSearch(node.value);e.preventDefault();}return;}
-    if(code===37||code===38||code===39||code===40){if(document.activeElement.tagName==='INPUT')return;e.preventDefault();spatial(({37:'left',38:'up',39:'right',40:'down'})[code]);}
+    if(code===13){var node=document.activeElement;if(node&&node.id==='search-input'){e.preventDefault();submitSearch();}return;}
+    if(code===37||code===38||code===39||code===40){
+      if(document.activeElement.id==='search-input'){
+        if(code===40){e.preventDefault();document.activeElement.blur();focusSafe(resultFocus());}
+        return;
+      }
+      e.preventDefault();spatial(({37:'left',38:'up',39:'right',40:'down'})[code]);
+    }
   },true);
   // TV apps may dispatch the key on window when focus is absent.
   window.addEventListener('pageshow',function(){if(activePage==='home'&&cache.all.length){composeHome();}});
   document.addEventListener('visibilitychange',function(){if(!document.hidden && activePage==='home'&&cache.all.length)composeHome();});
-  /* Rotation is paused while the user is selecting content, to preserve focus. */
+  /* Copertina consigliata ogni ~8 secondi. La rotazione si ferma durante l'uso del telecomando. */
   setInterval(function(){
-    if(activePage!=='home'||dialogMode||state.menuOpen||cache.all.length<2||document.hidden)return;
+    if(activePage!=='home'||dialogMode||state.menuOpen||playback.active||!trailerLayer.classList.contains('hidden')||cache.all.length<2||document.hidden)return;
     if(view.contains(document.activeElement))return;
     state.heroIndex=(state.heroIndex+1)%Math.min(cache.all.length,5);
     composeHome();
-  },12000);
+  },7800);
   goto('home');
 })();

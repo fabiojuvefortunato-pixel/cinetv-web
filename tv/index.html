@@ -37,6 +37,31 @@
   </div>
   <div id="shade" class="shade hidden" aria-hidden="true"></div>
   <div id="dialog" class="dialog hidden" role="dialog" aria-modal="true"></div>
+  <!-- Il video è incorporato nella pagina TV. I controlli play/pausa appartengono al lettore Vixsrc. -->
+  <section id="player-layer" class="video-layer hidden" aria-hidden="true">
+    <div class="video-topbar">
+      <button id="player-close" class="video-tool tv-focus" data-action="playerClose">← Torna a CineTV</button>
+      <strong id="playback-title">Riproduzione</strong>
+      <button class="video-tool tv-focus" data-action="externalPlay">Apri direttamente ↗</button>
+    </div>
+    <iframe id="player-frame" title="Lettore video esterno" src="about:blank" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer" loading="eager"></iframe>
+    <div id="player-hint" class="video-hint">Usa i controlli del lettore.</div>
+    <div id="up-next" class="up-next hidden">
+      <div class="up-next-eyebrow">EPISODIO SUCCESSIVO</div>
+      <h3 id="up-next-title">Stagione 1 · Episodio 2</h3>
+      <p id="up-next-countdown">Riproduzione automatica…</p>
+      <button id="play-next" class="action primary tv-focus" data-action="nextEpisode">▶ Guarda adesso</button>
+      <button class="action tv-focus" data-action="cancelNext">Annulla</button>
+    </div>
+  </section>
+  <section id="trailer-layer" class="video-layer trailer-layer hidden" aria-hidden="true">
+    <div class="video-topbar">
+      <button id="trailer-close" class="video-tool tv-focus" data-action="trailerClose">← Torna alla scheda</button>
+      <strong id="trailer-caption">Trailer</strong>
+      <button id="trailer-open" class="video-tool tv-focus hidden" data-action="youtubeOpen">Apri YouTube ↗</button>
+    </div>
+    <div class="trailer-container"><iframe id="trailer-frame" title="Trailer del film o della serie" src="about:blank" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+  </section>
   <script src="../config.js"></script>
   <script src="app.js"></script>
 </body>
