@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CineTV · Test player browser</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Arial,sans-serif;background:#0e1221;color:#f4f4fa}
+*{box-sizing:border-box}body{margin:0 auto;max-width:900px;padding:22px 16px 50px}h1{font-size:26px;margin:0 0 10px}p{line-height:1.5;color:#c8ccdb}.panel{background:#181f34;border:1px solid #303a58;border-radius:16px;padding:18px;margin-top:18px}label{display:block;font-weight:600;margin:12px 0 6px}input,select{width:100%;padding:14px;border:1px solid #56617d;background:#0c1121;color:white;border-radius:10px;font-size:17px}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}button,a.btn{background:#aa92ff;border:0;border-radius:11px;color:#100c1e;padding:14px 16px;text-decoration:none;font-size:16px;font-weight:700;cursor:pointer}.secondary{background:#293551!important;color:#fff!important}.screen{position:relative;width:100%;aspect-ratio:16/9;background:#070910;border-radius:12px;overflow:hidden;border:1px solid #384261}.screen iframe{border:0;width:100%;height:100%;display:block}#status{font-size:14px;color:#cbd2e6}code{word-break:break-word;color:#c3b2ff}small{color:#9fa9c3}#episodeWrap{display:none}
+</style>
+</head>
+<body>
+<h1>CineTV · Test player sul browser</h1>
+<p>Questa pagina verifica soltanto le due modalità documentate dal servizio: <strong>player incorporato</strong> e <strong>apertura diretta</strong>. Non scarica video, non estrae flussi HLS e non crea playlist.</p>
+<div class="panel">
+<label for="kind">Tipo di contenuto</label>
+<select id="kind"><option value="movie">Film</option><option value="tv">Serie TV / episodio</option></select>
+<label for="id">ID TMDB (solo numeri)</label>
+<input id="id" type="text" inputmode="numeric" pattern="[0-9]+" value="1236045" placeholder="Es. 1236045">
+<div id="episodeWrap"><label for="season">Stagione</label><input id="season" value="1" inputmode="numeric" type="number" min="1"><label for="episode">Episodio</label><input id="episode" value="1" inputmode="numeric" type="number" min="1"></div>
+<div class="buttons"><button id="embed">Prova dentro la pagina</button><a class="btn secondary" id="direct" href="https://vixsrc.to/movie/1236045?lang=it&amp;autoplay=false" target="_blank" rel="noopener noreferrer">Apri player direttamente ↗</a></div>
+<p id="status" role="status">Premi «Prova dentro la pagina» e verifica se compare il lettore.</p>
+<small>Nota: l'apertura di un iframe non prova che il film sia riproducibile. Controlla se compare un lettore funzionante o un messaggio di blocco.</small>
+</div>
+<div class="panel"><div class="screen" id="screen"><div style="padding:20px;color:#abb3cb">Il player apparirà qui dopo il test.</div></div></div>
+<div class="panel"><strong>Risultato da comunicare</strong><p>1. Nel riquadro: il video parte / blocco Cloudflare / schermo nero.<br>2. Dal pulsante «Apri player direttamente»: parte / non parte.</p><small>Usa soltanto contenuti per cui disponi delle autorizzazioni necessarie alla visione.</small></div>
+<script>
+(function(){
+var $=function(id){return document.getElementById(id)};
+function build(){var id=$('id').value.trim();if(!/^\d+$/.test(id)){alert('Inserisci un ID TMDB numerico.');return null;}
+var path='/movie/'+id;if($('kind').value==='tv'){var s=$('season').value,e=$('episode').value;if(!/^[1-9]\d*$/.test(s)||!/^[1-9]\d*$/.test(e)){alert('Stagione ed episodio devono essere numeri maggiori di zero.');return null;}path='/tv/'+id+'/'+s+'/'+e;}return 'https://vixsrc.to'+path+'?lang=it&autoplay=false';}
+$('kind').onchange=function(){$('episodeWrap').style.display=this.value==='tv'?'block':'none';};
+$('embed').onclick=function(){var u=build();if(!u)return;var f=document.createElement('iframe');f.src=u;f.title='Player di prova';f.setAttribute('allow','autoplay; fullscreen; encrypted-media; picture-in-picture');f.setAttribute('allowfullscreen','');var wrap=$('screen');wrap.textContent='';wrap.appendChild(f);$('status').textContent='Caricamento richiesto. Osserva il riquadro: un blocco Cloudflare o una schermata nera indicano che il player non funziona incorporato.';$('direct').href=u;};
+$('direct').onclick=function(e){var u=build();if(!u){e.preventDefault();return;}$('direct').href=u;};
+})();
+</script>
+</body>
+</html>
