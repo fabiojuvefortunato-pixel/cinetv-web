@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#070a13">
+  <meta name="referrer" content="origin">
+  <title>CineTV LAB — Test web sorgenti e HLS</title>
+  <link rel="stylesheet" href="style.css?v=lab1.6">
+</head>
+<body>
+  <div id="app">
+    <aside id="rail" class="rail" aria-label="Menu laterale">
+      <div class="rail-head"><span class="app-symbol">▶</span><strong class="expanded-only">Cine<span>TV</span></strong></div>
+      <nav id="side-menu">
+        <button class="side-link tv-focus" data-go="search" data-nav="1" aria-label="Cerca"><span class="side-icon">⌕</span><span class="expanded-only">Cerca</span></button>
+        <button class="side-link tv-focus" data-go="explore" data-nav="1" aria-label="Esplora"><span class="side-icon">▦</span><span class="expanded-only">Esplora</span></button>
+        <button class="side-link tv-focus" data-go="favorites" data-nav="1" aria-label="Preferiti"><span class="side-icon">♡</span><span class="expanded-only">Preferiti</span></button>
+        <button class="side-link tv-focus" data-go="settings" data-nav="1" aria-label="Informazioni"><span class="side-icon">⚙</span><span class="expanded-only">Informazioni</span></button>
+      </nav>
+      <div class="rail-foot expanded-only">Catalogo TMDB <span>·</span> CineTV</div>
+    </aside>
+    <main class="page" id="page">
+      <header class="topbar">
+        <div class="logo">Cine<span>TV</span><span class="logo-dot">.</span></div>
+        <nav class="topnav" id="topnav">
+          <button class="top-link tv-focus selected" data-go="home">Home</button>
+          <button class="top-link tv-focus" data-go="movie">Film</button>
+          <button class="top-link tv-focus" data-go="tv">Serie TV</button>
+          <button class="top-link tv-focus" data-go="live">TV in diretta <small>PROSSIMAMENTE</small></button>
+        </nav>
+        <div class="top-actions"><span class="top-live-dot"></span><span>SMART TV</span></div>
+      </header>
+      <div id="view" class="viewport"></div>
+      <div id="status" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+  <div id="shade" class="shade hidden" aria-hidden="true"></div>
+  <div id="dialog" class="dialog hidden" role="dialog" aria-modal="true"></div>
+  <!-- CineTV LAB: fonti video autorizzate, ricerca disponibilita' e player HLS per browser desktop -->
+  <section id="player-layer" class="video-layer hidden" aria-hidden="true">
+    <div class="video-topbar">
+      <button id="player-close" class="video-tool tv-focus" data-action="playerClose">← Torna alla scheda</button>
+      <strong id="playback-title">CineTV · Verifica sorgenti</strong>
+      <button class="video-tool tv-focus" data-action="refreshSources">↻ Aggiorna fonti</button>
+    </div>
+    <div id="source-choice" class="source-choice">
+      <div class="source-shell">
+        <div class="source-tag">CINETV LAB · TEST WEB</div>
+        <h2 id="source-heading">Verifica sorgenti video</h2>
+        <p class="source-description">CineTV cerca prima le sorgenti HLS esplicitamente configurate per questo titolo. Separatamente consulta la disponibilità ufficiale in Italia tramite TMDB e JustWatch. Nessun sito viene analizzato per estrarre video o aggirare restrizioni.</p>
+        <div class="source-panel"><h3>Flussi video configurati</h3><div id="source-status">Controllo in corso…</div><div id="source-results"></div></div>
+        <div class="source-panel"><h3>Dove è disponibile in Italia</h3><div id="provider-results">Ricerca in corso…</div><p class="source-fineprint">Disponibilità: dati JustWatch tramite TMDB. Un provider non equivale a un link HLS diretto.</p></div>
+        <div class="source-panel source-panel-demo">
+          <h3>Prova il lettore interno</h3>
+          <p>Il video qui sotto è un <strong>filmato dimostrativo</strong>, non il titolo selezionato. Serve solo a verificare il lettore HLS su Chrome/Edge/Firefox.</p>
+          <button class="action tv-focus" data-action="playDemo">▶ Riproduci video HLS di prova</button>
+        </div>
+        <div class="source-panel">
+          <h3>URL video personale (test locale)</h3>
+          <p>Se disponi di un link HLS/MP4 autorizzato, puoi provarlo senza pubblicarlo su GitHub.</p>
+          <div class="manual-source-line"><input id="manual-stream-url" type="url" placeholder="https://tuo-provider.example/video.m3u8" autocomplete="off" spellcheck="false"/><button class="action tv-focus" data-action="playPersonal">Prova URL</button></div>
+          <p class="source-fineprint">L'URL inserito non viene memorizzato o inviato al nostro backend. Il browser lo richiede direttamente alla sorgente.</p>
+        </div>
+      </div>
+    </div>
+    <div id="cinema-screen" class="cinema-screen hidden">
+      <div class="cinema-head"><span id="cinema-label">Filmato di prova</span><button class="video-tool tv-focus" data-action="sourceList">← Torna alle sorgenti</button></div>
+      <video id="cine-video" controls playsinline preload="none" aria-label="Lettore video CineTV"></video>
+      <div id="cine-error" class="cine-error" role="status"></div>
+    </div>
+  </section>
+  <section id="trailer-layer" class="video-layer trailer-layer hidden" aria-hidden="true">
+    <div class="video-topbar">
+      <button id="trailer-close" class="video-tool tv-focus" data-action="trailerClose">← Torna alla scheda</button>
+      <strong id="trailer-caption">Trailer</strong>
+      <button id="trailer-open" class="video-tool tv-focus hidden" data-action="youtubeOpen">▶ Guarda su YouTube ↗</button>
+    </div>
+    <div class="trailer-container">
+      <div id="trailer-preview" class="trailer-preview">
+        <img id="trailer-thumb" class="hidden" alt="Anteprima del trailer">
+        <div class="trailer-preview-actions">
+          <p>Trailer selezionato, con preferenza per l'italiano se disponibile.<br>Il video di YouTube non è riproducibile stabilmente dentro CineTV su questa TV.</p>
+          <button id="trailer-play" class="action primary tv-focus hidden" data-action="trailerInternal">▶ Prova video interno</button>
+        </div>
+      </div>
+      <iframe id="trailer-frame" class="hidden" title="Trailer del film o della serie" src="about:blank" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    </div>
+  </section>
+  <script src="../config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js" defer></script>
+  <script src="app.js?v=lab1.6" defer></script>
+</body>
+</html>

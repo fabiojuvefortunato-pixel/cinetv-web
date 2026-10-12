@@ -1,0 +1,21 @@
+{
+  "description": "CineTV LAB - flussi HLS autorizzati per titoli TMDB. I demo non sono associati a film commerciali.",
+  "updated": "2026-10-12",
+  "streams": [],
+  "schema_example": {
+    "name": "Mio film autorizzato",
+    "tmdb_id": 12345,
+    "media_type": "movie",
+    "url": "https://example.org/authorized.m3u8",
+    "usage_rights": "Contenuto di mia proprieta' o con autorizzazione"
+  },
+  "schema_episode_example": {
+    "name": "Mia serie - S1E1",
+    "tmdb_id": 12345,
+    "media_type": "tv",
+    "season": 1,
+    "episode": 1,
+    "url": "https://example.org/authorized-episode.m3u8",
+    "usage_rights": "Contenuto autorizzato"
+  }
+}
