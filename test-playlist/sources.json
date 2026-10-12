@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Big Buck Bunny - Demo HLS",
+    "group": "Video di prova",
+    "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+  },
+  {
+    "title": "Apple BipBop - Demo HLS",
+    "group": "Video di prova",
+    "url": "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8"
+  }
+]
