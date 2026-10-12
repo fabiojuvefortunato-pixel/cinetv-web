@@ -87,3 +87,40 @@ html{scroll-behavior:auto}
 }
 .player-choice-inner .action.primary { min-width:260px; }
 .player-choice-note { max-width:760px; margin-left:auto; margin-right:auto; }
+
+/* CineTV 1.6 - TV in diretta (solo emittenti gratuite) */
+.live-page{padding:13px 66px 65px 76px}
+.live-header{padding:15px 0 11px}
+.live-header h1{font-size:48px;letter-spacing:-1px;margin:13px 0 11px;font-weight:900}
+.live-header h1 span{font-size:14px;vertical-align:middle;margin-left:14px;border:1px solid #ea416c;color:#ff7a99;padding:8px 12px;border-radius:25px;letter-spacing:1px}
+.live-header p{color:#a6b3c9;max-width:1000px;line-height:1.5;margin:0 0 17px;font-size:17px}
+.live-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:16px 0 22px;border-bottom:1px solid #29344c}
+.live-search{border:1px solid #4f5674;background:#192337;border-radius:13px;min-width:270px;width:31%;min-height:57px;color:white;padding:13px 17px;font-size:18px}
+.live-filter{border:1px solid #43495f;border-radius:13px;background:#252c3f;min-height:57px;color:#edf0ff;padding:10px 15px;font-weight:bold;font-size:16px}
+.live-filter.active{background:#c9b7ff;color:#1d133b;border-color:#ddd2ff}
+.live-summary{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:#99a8c3;padding:16px 0;font-size:14px}
+.live-summary span:first-child{font-weight:bold;color:#f2f0ff}
+.live-list{display:block;border:1px solid #283347;border-radius:18px;background:rgba(17,24,41,.58);overflow:hidden}
+.live-row{display:flex;align-items:center;min-height:99px;border-bottom:1px solid #293248;padding:9px 14px 9px 20px;gap:18px}
+.live-row:last-child{border-bottom:none}
+.live-index{font-size:14px;color:#8594aa;width:27px;text-align:right;flex-shrink:0}
+.live-channel{display:flex;align-items:center;text-align:left;gap:20px;background:transparent;color:white;border:0;border-radius:10px;min-height:77px;padding:5px 12px;flex:1;min-width:0}
+.live-channel:hover{background:#252c43}
+.live-logo{width:70px;height:65px;background:#28344c;border:1px solid #424a63;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:8px}
+.live-logo img{width:100%;height:100%;object-fit:contain}
+.live-logo b{font-size:23px;color:#e1d6ff}
+.live-row-info{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
+.live-row-info strong{font-size:21px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.live-row-info small{color:#9caac3;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.live-air{font-size:13px;font-weight:bold;letter-spacing:1px;color:#ff88a4;min-width:65px;text-align:right}
+.live-air i{display:inline-block;width:8px;height:8px;background:#fa477d;border-radius:100%;margin-right:8px}
+.live-fav{width:53px;height:56px;flex-shrink:0;border:1px solid #41475f;background:#22283b;border-radius:12px;color:#dacbff;font-size:30px}
+.live-disclaimer{margin-top:23px;font-size:13px;line-height:1.6;color:#9caac4}
+.live-empty{font-size:19px;padding:45px;color:#b5bfd3}
+.live-player-layer{z-index:90}
+.live-video-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;background:#03060f;min-height:0}
+#live-video{width:100%;height:100%;max-height:100%;object-fit:contain;background:black}
+.live-video-message{position:absolute;left:50%;top:53%;transform:translate(-50%,-50%);max-width:85%;border-radius:13px;color:#f6eefe;background:#0b0d1cdb;font-size:19px;padding:14px 23px;pointer-events:none;text-align:center}
+.live-video-message:empty{display:none}
+@media(max-width:1350px){.live-page{padding-left:37px;padding-right:30px}.live-header h1{font-size:39px}.live-search{min-width:220px;width:43%}.live-filter{font-size:14px}.live-row-info strong{font-size:18px}}
+@media(max-width:850px){.live-toolbar{gap:8px}.live-search{width:100%}.live-filter{flex:1;white-space:nowrap;min-width:120px}.live-page{padding-left:20px;padding-right:15px}.live-air{display:none}.live-row{padding:7px;gap:5px}.live-logo{height:53px;width:53px}.live-row-info strong{font-size:16px}.live-row-info small{font-size:12px}}

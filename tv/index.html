@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#070a13">
   <meta name="referrer" content="origin">
   <title>CineTV — Smart TV</title>
-  <link rel="stylesheet" href="style.css?v=1.5">
+  <link rel="stylesheet" href="style.css?v=1.6">
 </head>
 <body>
   <div id="app">
@@ -27,7 +27,7 @@
           <button class="top-link tv-focus selected" data-go="home">Home</button>
           <button class="top-link tv-focus" data-go="movie">Film</button>
           <button class="top-link tv-focus" data-go="tv">Serie TV</button>
-          <button class="top-link tv-focus" data-go="live">TV in diretta <small>PROSSIMAMENTE</small></button>
+          <button class="top-link tv-focus" data-go="live">TV in diretta <small>LIVE</small></button>
         </nav>
         <div class="top-actions"><span class="top-live-dot"></span><span>SMART TV</span></div>
       </header>
@@ -79,7 +79,20 @@
       <iframe id="trailer-frame" class="hidden" title="Trailer del film o della serie" src="about:blank" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
     </div>
   </section>
+  <section id="live-player-layer" class="video-layer live-player-layer hidden" aria-hidden="true">
+    <div class="video-topbar">
+      <button id="live-close" class="video-tool tv-focus" data-action="liveClose">← Torna ai canali</button>
+      <strong id="live-player-title">TV in diretta</strong>
+      <button class="video-tool tv-focus" data-action="liveToggle">▶ / ❚❚</button>
+      <a id="live-external" class="video-tool tv-focus" href="#" target="_blank" rel="noopener noreferrer">↗ Apri sorgente</a>
+    </div>
+    <div class="live-video-wrap">
+      <video id="live-video" playsinline webkit-playsinline controls autoplay></video>
+      <p id="live-video-message" class="live-video-message">Connessione alla diretta…</p>
+    </div>
+  </section>
   <script src="../config.js"></script>
-  <script src="app.js?v=1.5"></script>
+  <script src="live.js?v=1.6"></script>
+  <script src="app.js?v=1.6"></script>
 </body>
 </html>

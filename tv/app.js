@@ -1,4 +1,4 @@
-/* CineTV — Interfaccia TV 1.5 (Chromium/Tizen 5.5 friendly).
+/* CineTV — Interfaccia TV 1.6 (Chromium/Tizen 5.5 friendly).
  * Catalogo dal Worker Cloudflare già configurato in ../config.js.
  * Nessuna chiave TMDB è inclusa in questo file.
  */
@@ -73,7 +73,15 @@
       focusSafe(firstAfterNavigation?(view.querySelector('.tv-focus')||document.querySelector('.top-link.selected')):mainFocusTarget());
     }
   }
-  function goto(page){closeDialog(false);if(page==='live'){activePage='live';navStatus();view.innerHTML='<div class="empty"><div class="hero-tag">CINETV · IN PREPARAZIONE</div><strong>TV in diretta</strong>Questa sezione arriverà in un futuro aggiornamento. Nessun canale è configurato in questa versione.</div>';menu(false);focusSafe(document.querySelector('.top-link[data-go="live"]'));return;}
+  function goto(page){
+    if(activePage==='live' && window.CineTVLive && page!=='live')window.CineTVLive.leave();
+    closeDialog(false);
+    if(page==='live'){
+      activePage='live';navStatus();
+      if(window.CineTVLive)window.CineTVLive.mount(view,focusSafe,setToast);
+      else view.innerHTML='<div class="empty">Il modulo TV in diretta non è caricato.</div>';
+      lastMainFocus=null;menu(false,true);view.scrollTop=0;return;
+    }
     if(page==='search'){activePage=page;navStatus();renderSearch();}
     else if(page==='favorites'){activePage=page;navStatus();renderFavorites();}
     else if(page==='settings'){activePage=page;navStatus();renderSettings();}
@@ -410,7 +418,7 @@
       }
     },900);
   }
-  function doClick(node){if(!node)return;var action=node.getAttribute('data-action');var go=node.getAttribute('data-go');if(go){if(!isInRail(document.activeElement))lastMainFocus=document.activeElement;goto(go);return;}
+  function doClick(node){if(!node)return;var action=node.getAttribute('data-action');var go=node.getAttribute('data-go');if(action && action.indexOf('live')===0 && window.CineTVLive){window.CineTVLive.click(node);return;}if(go){if(!isInRail(document.activeElement))lastMainFocus=document.activeElement;goto(go);return;}
     if(action==='heroSlide'){state.heroIndex=Number(node.getAttribute('data-index'))||0;composeHome();return;}
     if(action==='heroDetail'||action==='heroPlay'){choose(cache.all[state.heroIndex%cache.all.length]);if(action==='heroPlay'&&selected)launchPlay();return;}
     if(action==='detail'){var source=node.getAttribute('data-source'),index=Number(node.getAttribute('data-index')),items={recent:validRecent(),all:cache.all,movies:cache.movies,series:cache.series,results:state.results,favorites:favorites};choose((items[source]||[])[index]);return;}
@@ -439,9 +447,9 @@
     view.innerHTML=header;var pid=++reqCounter;var t=state.catalogType;var q={page:state.catalogPage,sort_by:'popularity.desc',include_adult:'false'};if(state.providerId){q.watch_region='IT';q.with_watch_providers=state.providerId;q.with_watch_monetization_types='flatrate';}if(state.genreId){var gid=state.genreId;if(t==='tv'&&cache.genresTv.length){for(var gi=0;gi<cache.genresTv.length;gi++){if(cache.genresTv[gi].name.toLowerCase()===state.genreName.toLowerCase()){gid=cache.genresTv[gi].id;break;}}}q.with_genres=gid;}
     call('/discover/'+t,q).then(function(data){if(pid!==reqCounter||activePage!=='catalog')return;state.results=(data.results||[]).map(function(x){return itemNorm(x,t);});var r=el('results');if(!r)return;r.innerHTML='<div class="catalog">'+state.results.map(function(x,i){return poster(x,i,'results');}).join('')+'</div>'+(Number(data.total_pages)>1?'<div class="pill-list" style="padding-left:80px"><button class="pill tv-focus" data-action="pagePrev" '+(state.catalogPage<=1?'disabled':'')+'>← Precedente</button><span class="pill">Pagina '+state.catalogPage+'</span><button class="pill tv-focus" data-action="pageNext">Successiva →</button></div>':'');}).catch(function(e){if(pid===reqCounter&&el('results'))el('results').innerHTML='<div class="empty"><strong>Non disponibile</strong>'+escapeHTML(e.message)+'</div>';});
   }
-  function back(){if(!trailerLayer.classList.contains('hidden')){closeTrailer();return;}if(playback.active){closePlayback(true);return;}if(dialogMode){closeDialog();return;}if(state.menuOpen){menu(false);return;}if(activePage==='catalog'){goto('explore');return;}if(activePage!=='home'){goto('home');return;}menu(true);}
+  function back(){if(window.CineTVLive && window.CineTVLive.back())return;if(!trailerLayer.classList.contains('hidden')){closeTrailer();return;}if(playback.active){closePlayback(true);return;}if(dialogMode){closeDialog();return;}if(state.menuOpen){menu(false);return;}if(activePage==='catalog'){goto('explore');return;}if(activePage!=='home'){goto('home');return;}menu(true);}
   function isInRail(n){return n&&rail.contains(n);}
-  function spatial(direction){var current=document.activeElement;if(current&&current.tagName==='INPUT')return;
+  function spatial(direction){if(window.CineTVLive && window.CineTVLive.isPlayer()){window.CineTVLive.focusPlayer(direction,focusSafe);return;}var current=document.activeElement;if(current&&current.tagName==='INPUT')return;
     if(playback.active){
       var playerButtons=[].slice.call(playerLayer.querySelectorAll('.tv-focus')).filter(function(n){return !n.classList.contains('hidden')&&!n.closest('.hidden');});
       var pos=playerButtons.indexOf(current),step=(direction==='left'||direction==='up')?-1:1;
@@ -511,6 +519,12 @@
   document.addEventListener('keydown',function(e){var code=e.keyCode||e.which;if(code===10009||code===27||code===8&&document.activeElement.tagName!=='INPUT'){e.preventDefault();back();return;}
     if(code===13){var node=document.activeElement;if(node&&node.id==='search-input'){e.preventDefault();submitSearch();}return;}
     if(code===37||code===38||code===39||code===40){
+      if(document.activeElement.id==='live-search'){
+        if(code===40){e.preventDefault();focusSafe(view.querySelector('[data-action="liveOpen"]')||view.querySelector('[data-action="liveFilter"]'));}
+        if(code===39){e.preventDefault();focusSafe(view.querySelector('[data-action="liveFilter"]'));}
+        if(code===38){e.preventDefault();focusSafe(document.querySelector('.top-link[data-go="live"]'));}
+        return;
+      }
       if(document.activeElement.id==='search-input'){
         if(code===40){e.preventDefault();document.activeElement.blur();focusSafe(resultFocus());}
         return;
