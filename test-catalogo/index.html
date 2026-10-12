@@ -10,11 +10,12 @@
 </style>
 </head>
 <body><div class="wrap">
-<header><div class="eyebrow">CineTV · Prova indipendente</div><h1>Test catalogo Vixsrc</h1><p>Verifichiamo la lettura dei titoli tramite API e l'associazione con gli ID TMDB. Questa pagina <b>non</b> cerca playlist video, non riproduce streaming e non modifica CineTV.</p></header>
-<section class="panel"><h2>1. Scegli il catalogo</h2><div class="tabs" role="tablist" aria-label="Tipo catalogo"><button type="button" class="tab" data-kind="movie" role="tab" aria-selected="true">🎬 Film</button><button type="button" class="tab" data-kind="tv" role="tab" aria-selected="false">📺 Serie TV</button><button type="button" class="tab" data-kind="episode" role="tab" aria-selected="false">📑 Episodi</button></div><p class="hint">Endpoint usato: <code id="endpoint">https://vixsrc.to/api/list/movie?lang=it</code></p><div class="row"><button id="load" type="button" class="primary">Carica catalogo</button><a id="direct" class="btn" href="https://vixsrc.to/api/list/movie?lang=it" target="_blank" rel="noopener noreferrer">Apri JSON originale ↗</a></div><div id="status" class="status" role="status" aria-live="polite" style="margin-top:12px">Premi «Carica catalogo» per iniziare.</div><div id="stats" class="stat-grid" style="margin-top:12px"><div class="stat"><strong id="total">—</strong><span>Record ricevuti</span></div><div class="stat"><strong id="valid">—</strong><span>ID TMDB leggibili</span></div></div></section>
+<header><div class="eyebrow">CineTV · Test 2</div><h1>Test catalogo tramite Worker</h1><p>Questa versione usa un Cloudflare Worker per leggere il catalogo. Non estrae video e non modifica CineTV.</p></header>
+<section class="panel"><h2>0. Collega il Worker</h2><label for="worker-base">Indirizzo del nuovo Cloudflare Worker (senza /catalog/movie)</label><input id="worker-base" class="search" type="text" placeholder="https://cinetv-catalogo.nomeutente.workers.dev" autocomplete="off" spellcheck="false"><p class="hint">Esempio: <code>https://cinetv-catalogo.nomeaccount.workers.dev</code>. Non inserire l'indirizzo del Worker TMDB già utilizzato da CineTV.</p><div class="row"><button id="save-worker" type="button">Salva indirizzo</button><a id="worker-link" href="#" class="btn" target="_blank" rel="noopener noreferrer">Prova Worker ↗</a></div><div id="worker-info" class="status" style="margin-top:12px">Inserisci l'indirizzo del Worker e premi Salva indirizzo.</div></section>
+<section class="panel"><h2>1. Scegli il catalogo</h2><div class="tabs" role="tablist" aria-label="Tipo catalogo"><button type="button" class="tab" data-kind="movie" role="tab" aria-selected="true">🎬 Film</button><button type="button" class="tab" data-kind="tv" role="tab" aria-selected="false">📺 Serie TV</button><button type="button" class="tab" data-kind="episode" role="tab" aria-selected="false">📑 Episodi</button></div><p class="hint">Endpoint del Worker: <code id="endpoint">Da configurare</code></p><div class="row"><button id="load" type="button" class="primary">Carica catalogo</button><a id="direct" class="btn" href="https://vixsrc.to/api/list/movie?lang=it" target="_blank" rel="noopener noreferrer">Apri JSON originale ↗</a></div><div id="status" class="status" role="status" aria-live="polite" style="margin-top:12px">Premi «Carica catalogo» per iniziare.</div><div id="stats" class="stat-grid" style="margin-top:12px"><div class="stat"><strong id="total">—</strong><span>Record ricevuti</span></div><div class="stat"><strong id="valid">—</strong><span>ID TMDB leggibili</span></div></div></section>
 <section class="panel"><h2>2. Cerca un ID TMDB</h2><div class="row"><input id="search" class="search grow" type="text" inputmode="numeric" placeholder="Es. 1236045 (Animals)" aria-label="ID TMDB da cercare"><button id="check" type="button">Verifica</button></div><div id="check-result" class="status" style="margin-top:12px">Dopo aver caricato il catalogo, inserisci un ID TMDB per verificarne la presenza.</div><p class="hint">Le API catalogo restituiscono soprattutto ID, non locandine né flussi HLS. Per riconoscere un titolo puoi usare il relativo <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">sito TMDB</a>.</p></section>
 <section class="panel"><h2>3. Sfoglia i primi ID</h2><p class="hint" id="result-label">Nessun dato caricato.</p><div id="items" class="items"></div><div class="row" style="justify-content:center;margin-top:15px"><button type="button" id="more" class="hidden">Mostra altri 40</button></div></section>
-<section class="panel"><h2>Se Chrome blocca la lettura</h2><p>La visita diretta all'indirizzo JSON (come nel tuo screenshot) <b>non garantisce</b> che una pagina GitHub possa leggerlo tramite JavaScript: il server deve consentire le richieste CORS.</p><p class="hint">In quel caso puoi testare il parsing caricando un file JSON salvato sul dispositivo. Non è necessario inserire password o chiavi API.</p><label for="file">Importa un file JSON del catalogo (opzionale)</label><input id="file" type="file" accept=".json,application/json,text/plain"><p id="file-message" class="hint"></p></section>
+<section class="panel"><h2>Test alternativo con file JSON</h2><p>La visita diretta all'indirizzo JSON (come nel tuo screenshot) <b>non garantisce</b> che una pagina GitHub possa leggerlo tramite JavaScript: il server deve consentire le richieste CORS.</p><p class="hint">In quel caso puoi testare il parsing caricando un file JSON salvato sul dispositivo. Non è necessario inserire password o chiavi API.</p><label for="file">Importa un file JSON del catalogo (opzionale)</label><input id="file" type="file" accept=".json,application/json,text/plain"><p id="file-message" class="hint"></p></section>
 <section class="notice"><b>Importante:</b> un elenco di ID TMDB non è una playlist M3U. La documentazione Vixsrc elenca URL del player ma non un'API pubblica per ottenere flussi HLS diretti. Non è stato testato alcun accesso alla riproduzione.</section>
 <footer>Prototipo CineTV – test tecnico del catalogo. I dati Vixsrc appartengono al rispettivo servizio. TMDB è un servizio separato. Per un'integrazione effettiva vanno verificate autorizzazioni e condizioni di utilizzo.</footer>
 </div><script>
@@ -22,7 +23,27 @@
 'use strict';
 var kind='movie', all=[], currentIndex=new Set(), limit=40, loaded=false;
 var $=function(id){return document.getElementById(id)};
-var api=function(k){return 'https://vixsrc.to/api/list/'+k+'?lang=it'};
+var originalApi=function(k){return 'https://vixsrc.to/api/list/'+k+'?lang=it'};
+var workerBase='';
+try {workerBase=localStorage.getItem('cinetv_catalog_worker')||'';}catch(e){}
+var api=function(k){return workerBase ? workerBase+'/catalog/'+k : 'Configura prima il Worker';};
+function normalizeWorkerUrl(value){
+ try{var u=new URL(String(value||'').trim());if(u.protocol!=='https:')return null; if(u.username||u.password)return null;return u.origin;}catch(e){return null;}
+}
+function refreshWorker(){
+ $('worker-base').value=workerBase;
+ $('endpoint').textContent=api(kind);
+ $('worker-link').href=workerBase?workerBase+'/health':'#';
+ $('worker-info').textContent=workerBase?'Worker configurato. Apri «Prova Worker» per verificare la risposta.':'Inserisci l’indirizzo completo del Worker e premi Salva indirizzo.';
+}
+$('save-worker').addEventListener('click',function(){
+ var value=normalizeWorkerUrl($('worker-base').value);
+ if(!value){$('worker-info').textContent='Inserisci un URL HTTPS valido (es. https://nome.workers.dev).';return;}
+ workerBase=value;
+ try{localStorage.setItem('cinetv_catalog_worker',value)}catch(e){}
+ refreshWorker();reset();message('Worker configurato. Premi «Carica catalogo» per procedere.');
+});
+refreshWorker();
 var toId=function(v){var t=String(v===undefined||v===null?'':v);return /^\d{1,12}$/.test(t)?t:null};
 function message(s,typ){var el=$('status');el.textContent=s;el.className='status '+(typ||'')}
 function format(n){return Number(n).toLocaleString('it-IT')}
@@ -51,11 +72,11 @@ function apply(data,source){
 }
 function fail(s){message(s,'err');$('load').disabled=false}
 function reset(){all=[];loaded=false;limit=40;currentIndex=new Set();$('total').textContent='—';$('valid').textContent='—';$('check-result').textContent='Carica il catalogo e verifica un ID.';render()}
-function setKind(k){kind=k;document.querySelectorAll('.tab').forEach(function(el){el.setAttribute('aria-selected',el.getAttribute('data-kind')===k?'true':'false')});$('endpoint').textContent=api(k);$('direct').href=api(k);reset();message('Selezionato '+(k==='movie'?'Film':k==='tv'?'Serie TV':'Episodi')+'. Premi «Carica catalogo».')}
+function setKind(k){kind=k;document.querySelectorAll('.tab').forEach(function(el){el.setAttribute('aria-selected',el.getAttribute('data-kind')===k?'true':'false')});$('endpoint').textContent=api(k);$('direct').href=originalApi(k);reset();message('Selezionato '+(k==='movie'?'Film':k==='tv'?'Serie TV':'Episodi')+'. Premi «Carica catalogo».')}
 document.querySelectorAll('.tab').forEach(function(el){el.addEventListener('click',function(){setKind(el.getAttribute('data-kind'))})});
-$('load').addEventListener('click',async function(){var active=kind;reset();this.disabled=true;message('Richiesta in corso verso '+api(active)+' …');var controller=new AbortController();var timer=setTimeout(function(){controller.abort()},18000);
- try{var res=await fetch(api(active),{method:'GET',mode:'cors',credentials:'omit',signal:controller.signal,headers:{Accept:'application/json'}});if(!res.ok)throw Error('HTTP '+res.status);var data=await res.json();if(kind===active)apply(data,'rete')}
- catch(e){if(kind===active)fail('Impossibile leggere il catalogo da questa pagina: '+(e.name==='AbortError'?'tempo scaduto':e.message)+'. Se il JSON si apre direttamente ma questa prova fallisce, è probabile un blocco CORS. Non significa che l’API sia offline.')}
+$('load').addEventListener('click',async function(){if(!workerBase){message('Prima inserisci l’indirizzo del Cloudflare Worker nel riquadro 0.','err');return;}var active=kind;reset();this.disabled=true;message('Richiesta in corso verso '+api(active)+' …');var controller=new AbortController();var timer=setTimeout(function(){controller.abort()},18000);
+ try{var res=await fetch(api(active),{method:'GET',mode:'cors',credentials:'omit',signal:controller.signal,headers:{Accept:'application/json'}});if(!res.ok){var detail='';try{var er=await res.json();detail=er.error||'';if(er.upstream_status)detail+=' (origine HTTP '+er.upstream_status+')';}catch(_){}throw Error('HTTP '+res.status+(detail?' — '+detail:''));}var data=await res.json();if(kind===active)apply(data,'rete')}
+ catch(e){if(kind===active)fail('Impossibile leggere il catalogo da questa pagina: '+(e.name==='AbortError'?'tempo scaduto':e.message)+'. Verifica che il Worker sia pubblicato e che /health risponda. Se ricevi HTTP 502, la richiesta dal Worker potrebbe essere stata bloccata dal server sorgente.')}
  finally{clearTimeout(timer);$('load').disabled=false}
 });
 function verify(){var id=toId($('search').value.trim());var out=$('check-result');if(!id){out.textContent='Inserisci un ID TMDB numerico valido.';out.className='status err';return}if(!loaded){out.textContent='Prima carica il catalogo selezionato.';out.className='status';return}var ok=currentIndex.has(id);out.textContent=ok?'Trovato: TMDB #'+id+' è presente nel catalogo '+kind+'.':'Non trovato: TMDB #'+id+' non compare nel catalogo '+kind+' attualmente caricato.';out.className='status '+(ok?'ok':'err')}
